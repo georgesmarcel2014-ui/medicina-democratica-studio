@@ -1,0 +1,35 @@
+name: medicina-democratica-studio
+services:
+  studio:
+    build: .
+    image: medicina-democratica-studio:local
+    ports:
+      - '127.0.0.1:8787:10000'
+    volumes:
+      - studio-jobs:/var/data
+    environment:
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
+      STUDIO_API_TOKEN_FILE: /run/secrets/studio_api_token
+    secrets:
+      - source: gemini_api_key
+        uid: '1000'
+        gid: '1000'
+        mode: 0400
+      - source: studio_api_token
+        uid: '1000'
+        gid: '1000'
+        mode: 0400
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '--max-time', '3', 'http://127.0.0.1:10000/healthz']
+      interval: 3s
+      timeout: 4s
+      retries: 10
+
+secrets:
+  gemini_api_key:
+    environment: GEMINI_API_KEY
+  studio_api_token:
+    environment: STUDIO_API_TOKEN
+
+volumes:
+  studio-jobs:

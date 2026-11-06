@@ -31,6 +31,8 @@ Em servidores sem navegador descoberto automaticamente, configure `CHROME_PATH` 
 
 ## Hospedagem e segredos
 
+Para operar no próprio computador, o [guia de execução local](docs/local.md) inicia o estúdio no Windows com Docker Desktop, mantém os arquivos em um volume local e guarda a chave do Google no perfil do Windows. O Google Flash TTS pode usar um projeto **Free Tier** dentro da cota da conta.
+
 O [guia de implantação](docs/deployment.md) usa o `Dockerfile` e o Blueprint `render.yaml` para executar um serviço HTTPS de operador único, com disco persistente. Configure `GEMINI_API_KEY` no painel **Environment** do serviço. O Blueprint gera um `STUDIO_API_TOKEN` separado para acessar o estúdio.
 
 Veja [Google TTS e legendas automáticas](docs/automated-tts.md) para o comando de WAV isolado e o comportamento de cada modo.
