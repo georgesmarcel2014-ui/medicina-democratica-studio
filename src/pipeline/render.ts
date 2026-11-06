@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {type EpisodeProps,FPS} from '../shared/schema';
-import {prepareEpisode} from './prepare';
+import {prepareEpisode,type ProductionOptions} from './prepare';
 import {verifyOutput,execute} from './media';
 import {toSrt} from './captions';
 async function browser(){
@@ -15,7 +15,7 @@ async function browser(){
  for(const p of ['/usr/bin/chromium','/usr/bin/chromium-browser','/usr/bin/google-chrome']){try{await access(p);return p;}catch{}}
  throw new Error('Chromium/Chrome não encontrado. Instale o navegador e configure CHROME_PATH.');
 }
-async function render(props:EpisodeProps,outputPath:string,media?:{audioFile:string;assetFiles:Record<string,string>}){
+async function render(props:EpisodeProps,outputPath:string,media?:{audioFile:string;assetFiles:Record<string,string>;generated:boolean}){
  const target=path.resolve(outputPath);if(!target.endsWith('.mp4'))throw new Error('A saída deve ter extensão .mp4');
  await mkdir(path.dirname(target),{recursive:true,mode:0o700});
  const work=await mkdtemp(path.join(tmpdir(),'md-render-'));
@@ -41,15 +41,16 @@ async function render(props:EpisodeProps,outputPath:string,media?:{audioFile:str
   // Copiar para o mesmo filesystem antes de publicar por rename atômico.
   const staging=`${target}.${process.pid}.tmp`;
   await copyFile(temporary,staging);await chmod(staging,0o600);await rename(staging,target);
-  const report={version:1,mode:media?'production':'silent-demo',verifiedAt:new Date().toISOString(),...verification,scenes:props.episode.scenes.length,captions:props.captions.length,narration:media?'WAV aprovado, sem corte ou alteração temporal':'ausente — demonstração visual silenciosa',...(media?{sourceAudioSha256:createHash('sha256').update(await readFile(media.audioFile)).digest('hex')}:{})};
+  const narration=media?.generated?'WAV gerado pelo Google TTS a partir de roteiro aprovado':media?'WAV aprovado, sem corte ou alteração temporal':'ausente — demonstração visual silenciosa';
+  const report={version:1,mode:media?'production':'silent-demo',verifiedAt:new Date().toISOString(),...verification,scenes:props.episode.scenes.length,captions:props.captions.length,narration,...(media?{sourceAudioSha256:createHash('sha256').update(await readFile(media.audioFile)).digest('hex')}:{})};
   await writeFile(`${target}.report.json`,JSON.stringify(report,null,2),{mode:0o600});
   if(props.captions.length){await writeFile(`${target}.srt`,toSrt(props.captions),{mode:0o600});await writeFile(`${target}.captions.json`,JSON.stringify(props.captions,null,2),{mode:0o600});}
   return report;
  }finally{await rm(work,{recursive:true,force:true});}
 }
-export async function renderEpisode(inputPath:string,outputPath:string){
- const prepared=await prepareEpisode(inputPath);
- return render(prepared.props,outputPath,{audioFile:prepared.audioFile,assetFiles:prepared.assetFiles});
+export async function renderEpisode(inputPath:string,outputPath:string,automation?:ProductionOptions){
+ const prepared=await prepareEpisode(inputPath,automation);
+ return render(prepared.props,outputPath,{audioFile:prepared.audioFile,assetFiles:prepared.assetFiles,generated:prepared.episode.audio.source==='google-tts'});
 }
 export async function renderDemo(outputPath:string){
  const props:EpisodeProps={episode:{title:'Ciência que se move',series:'noticias',visualIdentity:'medicina-democratica',script:'Demonstração visual silenciosa. Sem narração de produção.',instructions:'Gráficos e geometria originais; números apenas ilustrativos.',assets:[],scenes:[

@@ -1,8 +1,8 @@
 import {link, mkdir, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {MAX_DURATION} from '../shared/schema';
-import {probe, validateNarration} from './media';
+import {MAX_DURATION, MAX_TTS_SCRIPT_CHARS} from '../shared/schema';
+import {NarrationTooLongError, probe, validateNarration} from './media';
 
 /**
  * Google AI Studio / Gemini API TTS. No other voice provider is used.
@@ -18,10 +18,14 @@ export type GoogleTtsOptions = {
 
 export const DEFAULT_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 export const DEFAULT_TTS_VOICE = 'Charon';
+export class GoogleTtsHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Google TTS falhou (HTTP ${status}). Confira chave, cota e modelo.`);
+  }
+}
 const SAMPLE_RATE = 24_000;
 const CHANNELS = 1;
 const BYTES_PER_SAMPLE = 2;
-const MAX_SCRIPT_CHARS = 15_000;
 const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
 
 function pcmToWav(pcm: Buffer): Buffer {
@@ -29,7 +33,7 @@ function pcmToWav(pcm: Buffer): Buffer {
     throw new Error('Resposta PCM inválida do Google TTS.');
   }
   const duration = pcm.length / (SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE);
-  if (duration > MAX_DURATION) throw new Error('Narração gerada excede 179 segundos. Reduza o roteiro e gere novamente.');
+  if (duration > MAX_DURATION) throw new NarrationTooLongError('Narração gerada excede 179 segundos. Reduza o roteiro e gere novamente.');
   const header = Buffer.alloc(44);
   header.write('RIFF', 0, 'ascii');
   header.writeUInt32LE(36 + pcm.length, 4);
@@ -49,7 +53,7 @@ function pcmToWav(pcm: Buffer): Buffer {
 
 export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buffer> {
   const script = options.script.trim();
-  if (!script || script.length > MAX_SCRIPT_CHARS) throw new Error('Roteiro TTS vazio ou excessivamente longo.');
+  if (!script || script.length > MAX_TTS_SCRIPT_CHARS) throw new Error('Roteiro TTS vazio ou excessivamente longo.');
   if (!options.apiKey.trim()) throw new Error('Configure GEMINI_API_KEY no ambiente privado; nunca envie a chave pelo chat ou GitHub.');
   const model = options.model ?? DEFAULT_TTS_MODEL;
   const voice = options.voice ?? DEFAULT_TTS_VOICE;
@@ -72,18 +76,21 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
           }
         }
       }),
-      signal: AbortSignal.timeout(120_000)
+      signal: AbortSignal.timeout(120_000),
+      redirect: 'error'
     }
   );
   if (!response.ok) {
     // Never echo provider error bodies: they can contain script or sensitive inputs.
-    throw new Error('Google TTS falhou (HTTP ' + response.status + '). Confira chave, cota e modelo.');
+    throw new GoogleTtsHttpError(response.status);
   }
   const result: unknown = await response.json();
   const data = (result && typeof result === 'object' ? result : {}) as {
-    candidates?: Array<{content?: {parts?: Array<{inlineData?: {data?: string; mimeType?: string}}>} }>;
+    candidates?: Array<{finishReason?: string; content?: {parts?: Array<{inlineData?: {data?: string; mimeType?: string}}>} }>;
   };
-  const audio = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.data)?.inlineData;
+  const candidate = data.candidates?.[0];
+  if (candidate?.finishReason && candidate.finishReason !== 'STOP') throw new Error('O Google TTS não concluiu a narração.');
+  const audio = candidate?.content?.parts?.find(part => part.inlineData?.data)?.inlineData;
   if (!audio?.data || audio.data.length > MAX_AUDIO_BYTES * 2) throw new Error('Google TTS não retornou áudio válido.');
   if (!/^[\w+/]+={0,2}$/.test(audio.data)) throw new Error('Base64 de áudio inválido.');
   const bytes = Buffer.from(audio.data, 'base64');
@@ -95,7 +102,7 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
     return bytes;
   }
   if (!mime.startsWith('audio/l16') && !mime.startsWith('audio/pcm')) {
-    throw new Error('Formato de áudio Google não suportado: ' + mime.slice(0, 60));
+    throw new Error('Formato de áudio Google não suportado.');
   }
   const rate = /rate=(\d+)/.exec(mime)?.[1];
   if (rate && Number(rate) !== SAMPLE_RATE) throw new Error('Taxa PCM inesperada do Google TTS.');

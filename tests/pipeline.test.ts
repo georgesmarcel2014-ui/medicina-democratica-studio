@@ -3,15 +3,30 @@ import assert from 'node:assert/strict';
 import {captionSchema,episodeSchema,type Caption,type Episode} from '../src/shared/schema';
 import {importWhisperX,prepareCaptions,toSrt,validateCaptions} from '../src/pipeline/captions';
 import {prepareScenes} from '../src/pipeline/prepare';
+import {captionsFromSpeech,TranscriptMismatchError} from '../src/pipeline/transcribe';
 
 function episode(overrides:Partial<Episode>={}):Episode {
  return {title:'Teste editorial',series:'noticias',script:'Texto aprovado.',visualIdentity:'medicina-democratica',audio:{path:'narration.wav',source:'google-ai-studio',approved:true},scenes:[],assets:[],...overrides};
 }
 const captions:Caption[]=[{text:'Saúde para todos.',start:0,end:2,words:[{text:'Saúde',start:0,end:0.5},{text:'para',start:0.6,end:0.9},{text:'todos.',start:1,end:2}]}];
 
-test('produção exige WAV aprovado do Google AI Studio e impede TTS alternativo',()=>{
+test('produção aceita WAV aprovado ou geração pelo Google com roteiro aprovado',()=>{
  assert.throws(()=>episodeSchema.parse(episode({audio:{path:'narration.wav',source:'tts' as never,approved:true}})));
  assert.throws(()=>episodeSchema.parse(episode({audio:{path:'narration.wav',source:'google-ai-studio',approved:false as never}})));
+ assert.throws(()=>episodeSchema.parse(episode({audio:{path:'narration.wav',source:'google-tts',scriptApproved:false as never}})));
+ assert.equal(episodeSchema.parse(episode({audio:{path:'narration.wav',source:'google-tts',scriptApproved:true}})).audio.source,'google-tts');
+});
+
+test('legendas automáticas preservam tempos acústicos e grafia aprovada quando a fala coincide',()=>{
+ const heard=[{text:'saude',start:0.2,end:0.5},{text:'para',start:0.65,end:0.8},{text:'todos',start:0.85,end:1.25}];
+ const [caption]=captionsFromSpeech(heard,'Saúde para todos.',1.4);
+ assert.equal(caption.text,'Saúde para todos.');
+ assert.equal(caption.start,0.2);
+ assert.equal(caption.end,1.25);
+ assert.deepEqual(caption.words?.map(word=>[word.start,word.end]),heard.map(word=>[word.start,word.end]));
+ assert.throws(()=>captionsFromSpeech(heard,'O roteiro muda completamente.',1.4),TranscriptMismatchError);
+ assert.throws(()=>captionsFromSpeech(heard,'Saúde para todos.',1),/tempos/);
+ assert.throws(()=>captionsFromSpeech([],'Saúde para todos.',1.4),TranscriptMismatchError);
 });
 
 test('não inventa alinhamento proporcional quando há apenas transcrição',()=>{

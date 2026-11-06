@@ -4,9 +4,10 @@ import {realpath,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {MAX_DURATION,FPS} from '../shared/schema';
 export const execute=promisify(execFile);
+export class NarrationTooLongError extends Error {}
 export type Probe={format:{duration:string;format_name:string};streams:Array<{codec_type:string;codec_name:string;width?:number;height?:number;r_frame_rate?:string;duration?:string;sample_rate?:string;channels?:number}>};
 export async function probe(file:string):Promise<Probe>{
- const {stdout}=await execute('ffprobe',['-v','error','-show_format','-show_streams','-of','json',file],{timeout:30000,maxBuffer:2*1024*1024});
+ const {stdout}=await execute('ffprobe',['-v','error','-protocol_whitelist','file','-show_format','-show_streams','-of','json',file],{timeout:30000,maxBuffer:2*1024*1024});
  return JSON.parse(stdout);
 }
 export async function localFile(base:string,relative:string){
@@ -20,7 +21,7 @@ export function validateNarration(info:Probe){
  const audio=info.streams.filter(s=>s.codec_type==='audio');
  if(info.format.format_name!=='wav'||audio.length!==1||info.streams.some(s=>s.codec_type==='video'))throw new Error('Narração deve ser WAV com uma única faixa de áudio');
  if(!Number.isFinite(duration)||duration<=0)throw new Error('Duração do WAV inválida');
- if(duration>MAX_DURATION)throw new Error('Narração excede 179 segundos. Forneça um novo WAV aprovado; o áudio não será cortado ou acelerado.');
+ if(duration>MAX_DURATION)throw new NarrationTooLongError('Narração excede 179 segundos. Forneça um novo WAV aprovado; o áudio não será cortado ou acelerado.');
  return duration;
 }
 export async function verifyOutput(file:string,expectedSeconds:number,hasAudio:boolean){

@@ -1,0 +1,9 @@
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/
+!src/**
+!deploy/
+!deploy/requirements-asr.txt
+!deploy/transcribe.py

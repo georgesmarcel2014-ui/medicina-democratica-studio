@@ -8,6 +8,7 @@ import {buildServer} from '../src/api/app';
 const token='test-only-token-32-characters-minimum';
 const auth={authorization:`Bearer ${token}`};
 const episode={title:'Teste privado',series:'noticias',script:'Roteiro aprovado.',visualIdentity:'medicina-democratica',audio:{path:'narration.wav',source:'google-ai-studio',approved:true},captions:[{text:'Roteiro aprovado.',start:0,end:1}],scenes:[],assets:[]};
+const automatic={...episode,captions:undefined,audio:{path:'narration.wav',source:'google-tts',scriptApproved:true}};
 function multipart(files:{name:string;filename:string;type:string;data:string|Buffer}[]) {
   const boundary='studio-test-boundary';
   const pieces:Buffer[]=[];
@@ -15,7 +16,7 @@ function multipart(files:{name:string;filename:string;type:string;data:string|Bu
   pieces.push(Buffer.from(`--${boundary}--\r\n`));
   return {payload:Buffer.concat(pieces),headers:{...auth,'content-type':`multipart/form-data; boundary=${boundary}`}};
 }
-const upload=(doc:unknown=episode)=>multipart([{name:'episode',filename:'episode.json',type:'application/json',data:JSON.stringify(doc)},{name:'audio',filename:'narration.wav',type:'audio/wav',data:Buffer.from('RIFFtestWAVE')}]);
+const upload=(doc:unknown=episode,wav=Buffer.from('RIFFtestWAVE'))=>multipart([{name:'episode',filename:'episode.json',type:'application/json',data:JSON.stringify(doc)},{name:'audio',filename:'narration.wav',type:'audio/wav',data:wav}]);
 
 test('API exige autenticação e não expõe arquivos ou estado a visitantes',async()=>{
   const root=await mkdtemp(join(tmpdir(),'studio-api-'));
@@ -25,7 +26,51 @@ test('API exige autenticação e não expõe arquivos ou estado a visitantes',as
     assert.equal(response.statusCode,401);
     assert.deepEqual(response.json(),{error:'UNAUTHORIZED'});
     assert.equal((await app.inject({url:'/v1/jobs/unknown',headers:auth})).statusCode,404);
-    assert.equal((await app.inject({method:'POST',url:'/v1/jobs',headers:auth,payload:{}})).statusCode,415);
+    assert.equal((await app.inject({method:'POST',url:'/v1/jobs',headers:auth,payload:{}})).statusCode,400);
+    assert.equal((await app.inject({method:'POST',url:'/v1/jobs',headers:{...auth,'content-type':'text/plain'},payload:'teste'})).statusCode,415);
+    assert.deepEqual((await app.inject({url:'/healthz'})).json(),{ok:true});
+  } finally {await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('job automático exige roteiro aprovado e configuração do servidor',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'studio-api-'));
+  const app=await buildServer({token,jobsRoot:root});
+  try {
+    const create=(payload:unknown)=>app.inject({method:'POST',url:'/v1/jobs',headers:auth,payload:JSON.stringify(payload)});
+    const headers={...auth,'content-type':'application/json'};
+    const rejected=await app.inject({method:'POST',url:'/v1/jobs',headers,payload:{...automatic,audio:{...automatic.audio,scriptApproved:false}}});
+    assert.equal(rejected.statusCode,400);
+    const duplicate=await app.inject({method:'POST',url:'/v1/jobs',...upload(automatic)});
+    assert.equal(duplicate.statusCode,400);
+    const unconfigured=await app.inject({method:'POST',url:'/v1/jobs',headers,payload:automatic});
+    assert.equal(unconfigured.statusCode,503);
+    assert.deepEqual(unconfigured.json(),{error:'TTS_UNCONFIGURED'});
+    const noAligner=await app.inject({method:'POST',url:'/v1/jobs',...upload({...episode,captions:undefined})});
+    assert.equal(noAligner.statusCode,503);
+    assert.deepEqual(noAligner.json(),{error:'CAPTIONS_UNCONFIGURED'});
+    assert.equal((await create(automatic)).statusCode,415);
+    assert.deepEqual(await readdir(root),[]);
+  } finally {await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('job automático relata cota do Google e protege detalhes da resposta',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'studio-api-'));
+  const app=await buildServer({token,jobsRoot:root,automation:{
+    geminiApiKey:'segredo-sintetico',alignment:{python:'unused',modelPath:'unused'},
+    googleFetch:async()=>new Response('Roteiro e segredo-sintetico',{status:429})
+  }});
+  try {
+    const response=await app.inject({method:'POST',url:'/v1/jobs',headers:auth,payload:automatic});
+    assert.equal(response.statusCode,202,response.body);
+    const url=response.headers.location! as string;
+    let state=await app.inject({url,headers:auth});
+    for(let i=0;i<100 && state.json().status!=='failed';i++) {
+      await new Promise(resolve=>setTimeout(resolve,5));
+      state=await app.inject({url,headers:auth});
+    }
+    assert.equal(state.json().error,'TTS_RATE_LIMITED');
+    assert.doesNotMatch(state.body,/segredo-sintetico|Roteiro/);
+    assert.equal((await app.inject({url:`${url}/narration`,headers:auth})).statusCode,404);
   } finally {await app.close();await rm(root,{recursive:true,force:true});}
 });
 
@@ -39,7 +84,7 @@ test('upload privado, fila, estado e download autenticado usam o render injetado
     await hold;await writeFile(output,Buffer.from('test-mp4-output'));
   }});
   try {
-    const response=await app.inject({method:'POST',url:'/v1/jobs',...upload()});
+    const response=await app.inject({method:'POST',url:'/v1/jobs',...upload(episode,Buffer.alloc(300*1024))});
     assert.equal(response.statusCode,202,response.body);
     const id=response.json().id;
     assert.match(id,/^[0-9a-f-]{36}$/);
@@ -151,29 +196,38 @@ test('interface cria formulário multipart com WAV e legendas, consulta e oferec
   const {studioScript}=await import('../src/api/ui');
   const {runInNewContext}=await import('node:vm');
   const nodes:Record<string,any>={};
-  const make=(value='')=>({value,files:[],hidden:true,disabled:false,textContent:'',events:{} as Record<string,Function>,addEventListener(name:string,callback:Function){this.events[name]=callback;},reportValidity(){return true;}});
-  for(const id of ['production-form','status','produce','download','token','title','series','script','audio','captions','resume','job-id']) nodes[id]=make();
+  const make=(value='')=>({value,files:[],hidden:true,disabled:false,textContent:'',events:{} as Record<string,Function>,addEventListener(name:string,callback:Function){this.events[name]=callback;},reportValidity(){return true;},getAttribute(){},setAttribute(){},removeAttribute(){},click(){}});
+  for(const id of ['production-form','status','produce','download','download-captions','download-narration','token','title','series','script','audio','captions','resume','job-id']) nodes[id]=make();
   nodes.token.value=token;nodes.title.value='Título';nodes.series.value='noticias';nodes.script.value='Texto aprovado';
   nodes.audio.files=[new File(['WAV'],'definitivo.wav',{type:'audio/wav'})];
   nodes.captions.files=[new File([JSON.stringify(episode.captions)],'legendas.json',{type:'application/json'})];
   const paths:string[]=[];
-  let payload:FormData|undefined;
+  let submitted:RequestInit|undefined;
   const id='11111111-1111-4111-8111-111111111111';
   runInNewContext(studioScript,{
     document:{getElementById:(id:string)=>nodes[id]},window:{addEventListener(){}},
     Blob,FormData,URL,setTimeout,clearTimeout,
     fetch:async(path:string,options:RequestInit)=>{
       paths.push(path);assert.equal((options.headers as any).Authorization,`Bearer ${token}`);
-      if(options.method==='POST') {payload=options.body as FormData;return {ok:true,json:async()=>({id})};}
+      if(options.method==='POST') {submitted=options;return {ok:true,json:async()=>({id})};}
       if(path.endsWith('/video')) return {ok:true,blob:async()=>new Blob(['mp4'],{type:'video/mp4'})};
       return {ok:true,json:async()=>({id,status:'completed'})};
     }
   });
   await nodes['production-form'].events.submit({preventDefault(){}});
-  assert.deepEqual(paths,['/v1/jobs',`/v1/jobs/${id}`,`/v1/jobs/${id}/video`]);
-  const data=JSON.parse(await (payload!.get('episode') as Blob).text());
+  assert.deepEqual(paths,['/v1/jobs',`/v1/jobs/${id}`]);
+  const payload=submitted?.body as FormData;
+  const data=JSON.parse(await (payload.get('episode') as Blob).text());
   assert.equal(data.audio.path,'narration.wav');assert.equal(data.audio.approved,true);
-  assert.equal((payload!.get('narration') as File).name,'narration.wav');
+  assert.equal((payload.get('narration') as File).name,'narration.wav');
+  assert.equal(nodes['download-captions'].href,`/v1/jobs/${id}/captions`);
+  await nodes.download.events.click({preventDefault(){}});
+  assert.equal(paths.at(-1),`/v1/jobs/${id}/video`);
   assert.equal(nodes.download.hidden,false);assert.match(nodes.download.href,/^blob:/);
-  URL.revokeObjectURL(nodes.download.href);
+  nodes.audio.files=[];nodes.captions.files=[];
+  await nodes['production-form'].events.submit({preventDefault(){}});
+  assert.equal(new Headers(submitted?.headers).get('content-type'),'application/json');
+  const generated=JSON.parse(submitted?.body as string);
+  assert.deepEqual(generated.audio,{path:'narration.wav',source:'google-tts',scriptApproved:true});
+  assert.equal(generated.captions,undefined);
 });

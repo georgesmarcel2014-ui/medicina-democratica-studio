@@ -9,6 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test:render": "node --import tsx --test --test-isolation=none tests/render.integration.ts",
+    "test:production": "node --import tsx --test --test-isolation=none tests/production.integration.ts",
     "test": "node --import tsx --test --test-isolation=none tests/*.test.ts",
     "demo": "node --import tsx src/pipeline/cli.ts demo",
     "render": "node --import tsx src/pipeline/cli.ts render",
