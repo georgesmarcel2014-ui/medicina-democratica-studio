@@ -1,0 +1,173 @@
+openapi: 3.1.0
+info:
+  title: Medicina Democrática Studio — API privada
+  version: 0.1.0
+  description: |
+    API implementada para upload, fila local, consulta e download autenticado.
+    Nenhuma integração ChatGPT está conectada. Para GPT Actions/conector, hospede
+    esta API em HTTPS com autenticação, limites e armazenamento privado; configure
+    a integração separadamente. O chat precisa de uma forma real de transferir o WAV
+    aprovado: URLs temporárias e anexos do chat não são automaticamente acessíveis.
+    O endpoint de download também exige Bearer; não é um link público ou assinado.
+    A API é para um único operador confiável; o mesmo token acessa todos os jobs.
+    Entradas, áudio e vídeos permanecem no STUDIO_JOBS_DIR privado. A retenção e a
+    exclusão são responsabilidade do operador. Reinício marca jobs pendentes/em
+    render como falhos (INTERRUPTED); não há execução distribuída ou retry automático.
+servers:
+  - url: https://studio.example.invalid
+    description: Substitua por hospedagem HTTPS real; domínio ilustrativo, não operacional.
+security:
+  - StudioBearer: []
+paths:
+  /:
+    get:
+      operationId: openStudio
+      summary: Abrir formulário de produção sem terminal
+      security: []
+      description: |
+        Página estática pública sem dados de produção. Solicita chave de acesso,
+        título, série, roteiro aprovado, WAV e arquivo JSON de legendas alinhadas.
+        Monta o episódio automaticamente, acompanha o job e baixa MP4 autenticado.
+        Não persiste token no navegador. Recursos personalizados são enviados pela
+        API nesta versão; o formulário usa cenas originais geradas automaticamente.
+      responses:
+        '200':
+          description: Formulário HTML com CSP, sem dependências externas
+          content:
+            text/html:
+              schema: {type: string}
+  /ui.js:
+    get:
+      operationId: studioInterfaceScript
+      summary: JavaScript estático da interface
+      security: []
+      responses:
+        '200':
+          description: Script sem dados de produção ou credenciais
+          content:
+            application/javascript:
+              schema: {type: string}
+  /v1/jobs:
+    post:
+      operationId: createProductionJob
+      summary: Enviar episódio aprovado e insumos privados
+      description: |
+        Envie episode.json, narration.wav e todos os assets declarados no JSON.
+        audio.path deve ser exatamente narration.wav. Caminhos de assets precisam
+        ser basenames exclusivos (PNG/JPEG/WebP/MP4/WebM), nunca URLs ou diretórios.
+        Nomes aceitam letras ASCII, números, ponto, hífen e sublinhado; proíbem '..'.
+        Arquivos extras, duplicados e não declarados são rejeitados. O nome final.mp4
+        é reservado para a saída e não pode ser usado por um insumo.
+        JSON usa o esquema estrito src/shared/schema.ts: título, série, roteiro,
+        visualIdentity, WAV Google AI Studio aprovado, legendas temporizadas opcionais,
+        cenas e registro de origem/licença de assets. Sem legendas temporizadas, o
+        render exige alinhamento prévio conforme o pipeline, não inventa tempos.
+        Limites: 52 arquivos, 256 KiB no JSON, 256 MiB por arquivo, 512 MiB total;
+        recomenda-se definir limite de upload também no proxy HTTPS. Máximo de dez
+        uploads/jobs simultaneamente na fila e no render, um render de cada vez.
+        Aceitação 202 valida formato/arquivos; validação audiovisual ocorre no render.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [episode, narration]
+              properties:
+                episode:
+                  type: string
+                  format: binary
+                  description: Arquivo chamado episode.json, application/json.
+                narration:
+                  type: string
+                  format: binary
+                  description: Arquivo chamado narration.wav, audio/wav; WAV definitivo aprovado.
+                assets:
+                  type: array
+                  items: {type: string, format: binary}
+                  description: Insumos com nomes locais declarados em episode.assets.
+            encoding:
+              episode: {contentType: application/json}
+              narration: {contentType: audio/wav}
+      responses:
+        '202':
+          description: Job aceito para a fila local
+          headers:
+            Location:
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Job'}
+        '400': {$ref: '#/components/responses/InvalidInput'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '413': {description: Upload excede limite}
+        '415': {description: É necessário multipart/form-data}
+        '429': {description: Fila cheia; tente mais tarde}
+  /v1/jobs/{id}:
+    get:
+      operationId: getProductionJob
+      summary: Consultar o estado de um job
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Estado atual, sem conteúdo privado nem caminhos internos
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Job'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {description: Job inexistente}
+  /v1/jobs/{id}/video:
+    get:
+      operationId: downloadProductionVideo
+      summary: Baixar MP4 concluído
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: MP4 final como attachment, sem cache público
+          content:
+            video/mp4:
+              schema: {type: string, format: binary}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {description: Job ou vídeo inexistente}
+        '409': {description: Vídeo ainda indisponível ou render falhou}
+components:
+  securitySchemes:
+    StudioBearer:
+      type: http
+      scheme: bearer
+      description: STUDIO_API_TOKEN com pelo menos 32 bytes; nunca inserir no roteiro, repositório ou chat.
+  parameters:
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    Job:
+      type: object
+      required: [id, status, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [pending, rendering, completed, failed]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        error: {type: string, enum: [RENDER_FAILED, INTERRUPTED]}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+  responses:
+    InvalidInput:
+      description: JSON, upload ou caminho inválido; nenhum render enfileirado
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Bearer ausente ou inválido
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}

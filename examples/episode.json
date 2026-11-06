@@ -1,0 +1,10 @@
+{
+ "title":"Exemplo de estrutura — substitua pelos insumos aprovados",
+ "series":"na-pratica",
+ "visualIdentity":"medicina-democratica",
+ "script":"Insira aqui o roteiro aprovado, correspondente ao WAV definitivo.",
+ "audio":{"path":"narration.wav","source":"google-ai-studio","approved":true},
+ "captions":[{"text":"Insira a legenda aprovada.","start":0,"end":3,"words":[{"text":"Insira","start":0,"end":0.6},{"text":"a","start":0.6,"end":0.8},{"text":"legenda","start":0.8,"end":1.7},{"text":"aprovada.","start":1.7,"end":3}]}],
+ "scenes":[],
+ "assets":[]
+}

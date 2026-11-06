@@ -1,0 +1,53 @@
+name: Render demonstrativo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-demo-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ffmpeg
+      - name: Conferir navegador
+        run: '"$CHROME_PATH" --version'
+      - name: Instalar dependências fixadas
+        run: npm ci --no-audit --no-fund
+      - name: Verificar tipos e testes
+        run: npm run typecheck && npm test
+      - name: Renderizar e verificar demonstrativo
+        run: npm run demo
+      - name: Disponibilizar MP4 e relatórios
+        uses: actions/upload-artifact@v4
+        with:
+          name: medicina-democratica-demo
+          path: |
+            outputs/demo.mp4
+            outputs/*.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Resumo
+        if: always()
+        run: |
+          echo '### Medicina Democrática — demonstrativo' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Consulte o estado de cada etapa. Após sucesso, baixe o artefato medicina-democratica-demo nesta execução.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Este workflow usa somente conteúdo sintético e não configura uma integração com ChatGPT.' >> "$GITHUB_STEP_SUMMARY"
