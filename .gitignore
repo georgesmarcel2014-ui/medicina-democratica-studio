@@ -9,3 +9,5 @@ outputs/
 *.blend
 *.log
 coverage/
+# Única exceção: showcase original, público e sem narração de produção.
+!examples/showcase/demo.mp4

@@ -4,6 +4,8 @@ Pipeline modular para produzir vídeos científicos verticais com **Remotion + F
 
 O projeto recebe uma especificação estruturada de episódio, valida os insumos, monta cenas e legendas, renderiza MP4 H.264 em 1080 × 1920 a 30 FPS e verifica o resultado. A duração máxima é **179 segundos**. Uma demonstração sem narração exercita os elementos visuais originais; ela não substitui o WAV exigido para episódios de produção.
 
+[Baixar demonstração MP4 silenciosa (10 segundos)](examples/showcase/demo.mp4) · [Relatório de validação](docs/validation.md)
+
 ## Começar
 
 Requisitos: Node.js 24, npm, FFmpeg/ffprobe no `PATH` e Chromium/Chrome. Não é necessário Blender para o primeiro render.

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "mode": "silent-demo",
+  "verifiedAt": "2026-11-06T17:36:23.083Z",
+  "duration": 10,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "videoCodec": "h264",
+  "audioCodec": null,
+  "decoded": true,
+  "scenes": 3,
+  "captions": 0,
+  "narration": "ausente — demonstração visual silenciosa"
+}

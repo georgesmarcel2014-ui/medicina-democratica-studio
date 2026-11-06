@@ -32,6 +32,6 @@ O teste valida carregamento de `.blend`, configuração de saída, render de qua
 
 Não foi fornecido um WAV definitivo de produção. Não foram validados voz real, alinhamento acústico automático ou precisão clínica. O comando `align` importa alinhamento externo; não executa WhisperX.
 
-O código contém workflows CI e render demonstrativo sob demanda. Sua execução no GitHub depende do envio da branch, acesso à API, runners e permissões. YAML válido não é uma execução comprovada. O formulário/API foi preparado para uso em servidor configurado, sem implantação pública HTTPS, identidade multiusuário, armazenamento gerenciado ou conector ChatGPT.
+O código contém workflows CI e render demonstrativo sob demanda. A branch `feat/automated-audiovisual-studio` foi enviada ao GitHub. A criação de PR e a consulta/disparo de Actions estão bloqueadas pelo acesso à API `api.github.com` na política atual; sua liberação foi salva no rascunho. Não houve execução remota comprovada. YAML válido não é uma execução comprovada. O formulário/API foi preparado para uso em servidor configurado, sem implantação pública HTTPS, identidade multiusuário, armazenamento gerenciado ou conector ChatGPT.
 
 As configurações reutilizáveis `install_script` e `start_skill` e a inclusão de `api.github.com` foram salvas no rascunho do ambiente. Salvar o rascunho não publica o ambiente nem ativa a nova regra de rede. A publicação/restauração em uma nova tarefa não foi testada.
