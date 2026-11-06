@@ -45,6 +45,29 @@ jobs:
           persist-credentials: false
       - name: Construir a imagem de hospedagem
         run: docker build --tag studio-ci .
+      - name: Conferir o inicializador do Windows
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile("$PWD/deploy/start-studio.ps1", [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw ($errors -join "`n") }
+      - name: Verificar execução local com segredos do Compose
+        run: |
+          docker tag studio-ci medicina-democratica-studio:local
+          export STUDIO_API_TOKEN="$(openssl rand -hex 32)"
+          export GEMINI_API_KEY=' '
+          trap 'docker compose down --volumes' EXIT
+          docker compose up --no-build --wait --wait-timeout 60
+          docker compose exec -T --user node studio sh -c '
+            test -r /run/secrets/studio_api_token && test -r /run/secrets/gemini_api_key &&
+            test "$(stat -c %a /run/secrets/studio_api_token)" = 400 &&
+            test "$(stat -c %a /run/secrets/gemini_api_key)" = 400 &&
+            test -z "${STUDIO_API_TOKEN:-}${GEMINI_API_KEY:-}"
+          '
+          job='http://127.0.0.1:8787/v1/jobs/00000000-0000-4000-8000-000000000000'
+          test "$(curl -sS -o /dev/null -w '%{http_code}' "$job")" = 401
+          test "$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $STUDIO_API_TOKEN" "$job")" = 404
       - name: Gerar fala sintética em português
         run: |
           sudo apt-get update
