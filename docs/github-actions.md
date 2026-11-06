@@ -6,6 +6,8 @@
 
 ## Render demonstrativo
 
+Primeiro o arquivo do workflow precisa existir na branch padrão (`main`) para o GitHub disponibilizar o disparo manual. Esta entrega está em `feat/automated-audiovisual-studio`; revise e integre o PR antes desse passo. A criação do PR pela CLI foi bloqueada por `api.github.com` na rede atual.
+
 Na aba **Actions → Render demonstrativo → Run workflow**, selecione a branch e execute. O workflow instala FFmpeg, usa o Chrome do runner e chama `npm run demo`.
 
 Após sucesso, abra a execução e baixe **medicina-democratica-demo** na seção **Artifacts**. O ZIP contém o MP4 e os relatórios JSON disponíveis em `outputs/`. O GitHub pode exigir login e permissão para baixar artefatos; o endereço do artefato não é um link público permanente para o MP4. A retenção é de três dias, e a exclusão da execução pode remover o arquivo antes disso.
