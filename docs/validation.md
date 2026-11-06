@@ -1,6 +1,14 @@
 # Evidências de validação
 
-As verificações abaixo foram executadas no ambiente desta entrega, em 6 de novembro de 2026. Resultados locais não comprovam implantação remota, execução do GitHub Actions ou conexão com ChatGPT.
+## Fluxo automático
+
+Em 6 de novembro de 2026, `npm run test:production` exercitou a API HTTP com uma resposta PCM simulada do Google e fala sintética em português. O teste executou faster-whisper, Remotion e FFmpeg, comparou o PCM do WAV baixado com o original e decodificou o MP4 recebido pela API. A saída foi H.264 1080 × 1920 a 30 FPS, AAC, 6,03 s, com legendas e SRT. MP4, SRT e WAV responderam com HTTP 401 em pedidos sem token.
+
+O teste local usou Chromium e uma descrição da interface de loopback para o Remotion, pois o executor impede a enumeração de interfaces. A chamada real ao Google e o teste no serviço hospedado dependem da configuração descrita no [guia de implantação](deployment.md).
+
+## Registro da versão inicial
+
+As verificações a seguir registram a primeira entrega do motor audiovisual, anterior à integração do Google TTS com a API e o reconhecimento automático.
 
 ## Documentação, biblioteca e workflows
 

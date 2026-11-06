@@ -1,8 +1,8 @@
 # Medicina Democrática Studio
 
-Pipeline modular para produzir vídeos científicos verticais com **Remotion + FFmpeg**, preservando a narração WAV definitiva e permitindo revisão de legendas sem refazer o áudio.
+Pipeline para produzir vídeos científicos verticais com **Google AI Studio, faster-whisper, Remotion e FFmpeg**. A partir do roteiro aprovado, o estúdio gera o WAV, sincroniza as legendas pela fala e entrega MP4 e SRT. Um WAV definitivo do Google AI Studio também pode ser enviado para reutilizar a narração.
 
-O projeto recebe uma especificação estruturada de episódio, valida os insumos, monta cenas e legendas, renderiza MP4 H.264 em 1080 × 1920 a 30 FPS e verifica o resultado. A duração máxima é **179 segundos**. Uma demonstração sem narração exercita os elementos visuais originais; ela não substitui o WAV exigido para episódios de produção.
+O estúdio monta as cenas, valida e renderiza MP4 H.264 em 1080 × 1920 a 30 FPS. A duração máxima é **179 segundos**. A demonstração silenciosa apresenta os elementos visuais originais.
 
 [Baixar demonstração MP4 silenciosa (10 segundos)](examples/showcase/demo.mp4) · [Relatório de validação](docs/validation.md)
 
@@ -29,21 +29,17 @@ npm run render -- --input /caminho/privado/episode.json --output /caminho/privad
 
 Em servidores sem navegador descoberto automaticamente, configure `CHROME_PATH` para o executável do Chromium/Chrome. Arquivos de produção devem ficar fora do checkout ou em diretórios ignorados. Os caminhos de mídia do episódio são resolvidos a partir do diretório do JSON de entrada.
 
-## Narração TTS via Google AI Studio
+## Hospedagem e segredos
 
-Foi adicionado um comando administrativo para gerar WAV automaticamente a partir de roteiro aprovado, usando a API Google Gemini TTS (sem Runway):
+O [guia de implantação](docs/deployment.md) usa o `Dockerfile` e o Blueprint `render.yaml` para executar um serviço HTTPS de operador único, com disco persistente. Configure `GEMINI_API_KEY` no painel **Environment** do serviço. O Blueprint gera um `STUDIO_API_TOKEN` separado para acessar o estúdio.
 
-    npm run tts -- --input /caminho/privado/roteiro-aprovado.txt --output /caminho/privado/narration.wav
-
-Configure GEMINI_API_KEY como segredo **no servidor/worker**. Não exponha a chave no GitHub nem no formulário. Este módulo de geração está implementado e testado com respostas simuladas; uma chamada real exige credenciais/cota e não foi efetuada aqui. A geração TTS ainda não está conectada ao formulário, ao alinhamento automático de legendas nem ao fluxo ChatGPT completo. Veja [TTS automatizado e plano de integração](docs/automated-tts.md).
+Veja [Google TTS e legendas automáticas](docs/automated-tts.md) para o comando de WAV isolado e o comportamento de cada modo.
 
 ## Formulário de produção
 
 O administrador configura `STUDIO_API_TOKEN` (pelo menos 32 caracteres) e `STUDIO_JOBS_DIR` para uma pasta privada e inicia o serviço com `npm run api`. O serviço usa a porta 8787 e escuta em loopback por padrão. Configure hospedagem HTTPS protegida antes de oferecer acesso remoto.
 
-Com o serviço aberto no navegador, o operador informa sua chave de acesso, título, série e roteiro aprovado; seleciona o WAV e um JSON com o array de legendas já alinhadas; confirma que o WAV final do Google AI Studio está aprovado; e solicita o render. O formulário cria a especificação e as cenas automáticas, acompanha o estado e oferece download autenticado do MP4. A chave fica somente na memória da página. É possível retomar o acompanhamento por identificador de produção.
-
-O formulário inicial ainda exige legendas temporizadas preparadas previamente. Não executa WhisperX nem transcrição automática e não oferece upload de recursos visuais personalizados; esses recursos são suportados pela API estruturada. Ele elimina os comandos de render do trabalho do operador, mas não constitui ainda a experiência completa de enviar apenas uma ordem no ChatGPT e um WAV.
+Abra o serviço no navegador, informe o token do estúdio, título, série e roteiro, confirme a aprovação e selecione **Produzir vídeo**. Para reutilizar uma narração, anexe o WAV definitivo. Legendas revisadas em JSON são opcionais e devem corresponder ao WAV anexado. O formulário usa cenas automáticas e acompanha a fila pelo ID do trabalho. Depois do render, oferece download autenticado do MP4, SRT e WAV. Recursos visuais personalizados podem ser enviados pela [API](docs/openapi.yaml).
 
 ## Linhas editoriais
 
@@ -65,9 +61,7 @@ As três linhas compartilham marca, legendas em área segura e barra de progress
 - [Módulo Blender opcional](blender/README.md).
 - [Evidências de validação](docs/validation.md).
 
-O workflow manual gera um demonstrativo público e o entrega como artefato do GitHub Actions. **A existência do YAML não comprova uma execução remota:** consulte os logs da execução. O fluxo com ChatGPT necessita de um conector autorizado, hospedagem e autenticação; o repositório não estabelece por si só essa conexão nem entrega arquivos diretamente na conversa.
-
-O render local pode ser automatizado por um servidor, mas hospedagem pública, armazenamento de produção e integração com contas externas não são provisionados automaticamente. Não armazene dados identificáveis de pacientes neste repositório.
+O workflow manual gera um demonstrativo sintético no GitHub Actions. A integração direta com ChatGPT/Work depende de um conector autorizado, descrito em [Acionamento pelo ChatGPT](docs/chatgpt-integration.md). Reserve o GitHub para código e fixtures sintéticas.
 
 ## Licenças
 

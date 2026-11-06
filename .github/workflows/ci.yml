@@ -33,3 +33,39 @@ jobs:
         run: npm run typecheck
       - name: Executar testes
         run: npm test
+
+  production-container:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Construir a imagem de hospedagem
+        run: docker build --tag studio-ci .
+      - name: Gerar fala sintética em português
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends espeak-ng
+          espeak-ng -v pt-br -s 148 -w "$RUNNER_TEMP/studio-test.wav" 'A ciência começa com uma pergunta. A pesquisa ajuda a encontrar respostas.'
+      - name: Verificar serviço e produção no contêiner
+        run: |
+          export STUDIO_API_TOKEN="$(openssl rand -hex 32)"
+          docker volume create studio-ci-jobs
+          trap 'docker rm -f studio-ci >/dev/null 2>&1 || true; docker volume rm studio-ci-jobs >/dev/null 2>&1 || true' EXIT
+          docker run --detach --name studio-ci --network none --cpus 1 --memory 2g \
+            --env STUDIO_API_TOKEN \
+            --mount type=volume,source=studio-ci-jobs,target=/var/data \
+            --mount "type=bind,source=$PWD/tests,target=/app/tests,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/studio-test.wav,target=/fixture.wav,readonly" studio-ci
+          for attempt in {1..10}; do
+            if docker exec --user node studio-ci node -e 'fetch("http://127.0.0.1:10000/healthz").then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));'; then
+              docker exec --user node --env STUDIO_TEST_SPEECH_WAV=/fixture.wav studio-ci npm run test:production
+              exit "$?"
+            fi
+            sleep 1
+          done
+          docker logs studio-ci
+          exit 1

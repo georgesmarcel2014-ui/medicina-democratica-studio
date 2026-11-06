@@ -7,7 +7,8 @@ import {mkdir, lstat, realpath, readFile, writeFile, rename, readdir, rm} from '
 import {resolve, join} from 'node:path';
 import {pipeline} from 'node:stream/promises';
 import {Transform} from 'node:stream';
-import {episodeSchema} from '../shared/schema';
+import {episodeSchema, MAX_TTS_SCRIPT_CHARS} from '../shared/schema';
+import {ProductionError, type ProductionErrorCode, type ProductionOptions} from '../pipeline/prepare';
 import {studioHtml,studioScript} from './ui';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -15,8 +16,8 @@ const MAX_FILE = 256 * 1024 * 1024;
 const MAX_TOTAL = 512 * 1024 * 1024;
 const MAX_JSON = 256 * 1024;
 const MAX_BACKLOG = 10;
-export type JobStatus = {id:string; status:'pending'|'rendering'|'completed'|'failed'; createdAt:string; updatedAt:string; error?:'RENDER_FAILED'|'INTERRUPTED'};
-export type ServerOptions = {token:string; jobsRoot:string; render?:(inputPath:string,outputPath:string)=>Promise<unknown>};
+export type JobStatus = {id:string; status:'pending'|'rendering'|'completed'|'failed'; createdAt:string; updatedAt:string; error?:ProductionErrorCode|'RENDER_FAILED'|'INTERRUPTED'};
+export type ServerOptions = {token:string; jobsRoot:string; automation?:ProductionOptions; render?:(inputPath:string,outputPath:string)=>Promise<unknown>};
 const safeName = (name:string) => /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}$/.test(name) && !name.includes('..');
 const acceptableMime = (name:string, mime:string) => {
   const ext = name.split('.').pop()?.toLowerCase();
@@ -34,7 +35,7 @@ export async function buildServer(options:ServerOptions) {
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink() || await realpath(jobsRoot) !== jobsRoot || (rootStat.mode & 0o077) !== 0) {
     throw new Error('STUDIO_JOBS_DIR deve ser um diretório privado (0700), sem links simbólicos.');
   }
-  const app = Fastify({logger:false,bodyLimit:MAX_TOTAL,requestTimeout:120_000});
+  const app = Fastify({logger:false,bodyLimit:MAX_JSON,requestTimeout:120_000});
   await app.register(multipart,{limits:{files:52,fields:0,parts:52,fileSize:MAX_FILE}});
   const token = Buffer.from(options.token);
   const jobs = new Map<string,JobStatus>();
@@ -63,7 +64,7 @@ export async function buildServer(options:ServerOptions) {
   }
   const render = options.render ?? (async (inputPath:string,outputPath:string) => {
     const module = await import('../pipeline/render');
-    return module.renderEpisode(inputPath,outputPath);
+    return module.renderEpisode(inputPath,outputPath,options.automation ?? {});
   });
   const startQueue = () => {
     if (running) return;
@@ -77,8 +78,8 @@ export async function buildServer(options:ServerOptions) {
           const outputStat = await lstat(join(jobsRoot,id,'final.mp4'));
           if (!outputStat.isFile() || outputStat.isSymbolicLink() || outputStat.size === 0) throw new Error('No output');
           job.status='completed';await save(job);
-        } catch {
-          job.status='failed';job.error='RENDER_FAILED';await save(job);
+        } catch (error) {
+          job.status='failed';job.error=error instanceof ProductionError ? error.code : 'RENDER_FAILED';await save(job);
         }
       }
     })().finally(()=>{running=undefined;if(queue.length) startQueue();});
@@ -88,7 +89,7 @@ export async function buildServer(options:ServerOptions) {
   app.addHook('onClose',async()=>{while(running) await running;});
   app.addHook('onRequest',async(request,reply)=>{
     const path=request.url.split('?')[0];
-    if ((request.method==='GET' || request.method==='HEAD') && (path==='/' || path==='/ui.js')) {
+    if ((request.method==='GET' || request.method==='HEAD') && (path==='/' || path==='/ui.js' || path==='/healthz')) {
       reply.header('cache-control','no-store').header('x-content-type-options','nosniff');
       reply.header('content-security-policy',"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
       reply.header('x-frame-options','DENY');
@@ -109,9 +110,13 @@ export async function buildServer(options:ServerOptions) {
   });
   app.get('/',async(request,reply)=>reply.type('text/html; charset=utf-8').send(studioHtml));
   app.get('/ui.js',async(request,reply)=>reply.type('application/javascript; charset=utf-8').send(studioScript));
+  app.get('/healthz',async()=>({ok:true}));
   app.post('/v1/jobs',async(request,reply)=>{
     if (queue.length + (running ? 1 : 0) + uploads >= MAX_BACKLOG) return reply.code(429).send({error:'QUEUE_FULL'});
-    if (!request.isMultipart()) return reply.code(415).send({error:'MULTIPART_REQUIRED'});
+    const isMultipart=request.isMultipart();
+    if (!isMultipart && request.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json') {
+      return reply.code(415).send({error:'UNSUPPORTED_MEDIA_TYPE'});
+    }
     uploads++;
     const id = randomUUID();
     const dir = join(jobsRoot,id);
@@ -119,37 +124,48 @@ export async function buildServer(options:ServerOptions) {
     let created=false;
     const reject = async (code:number,error:string) => {
       await rm(dir,{recursive:true,force:true});
+      created=false;
       return reply.code(code).send({error});
     };
     try {
       await mkdir(dir,{mode:0o700});created=true;
       const names = new Set<string>();
-      let total=0;
-      for await (const part of request.parts()) {
-        if (part.type !== 'file' || !safeName(part.filename) || !acceptableMime(part.filename,part.mimetype) || names.has(part.filename) || part.filename === 'final.mp4') {
-          if (part.type === 'file') part.file.resume();
-          return await reject(400,'INVALID_UPLOAD');
+      let document:unknown=request.body;
+      const episodePath=join(dir,'episode.json');
+      if (isMultipart) {
+        let total=0;
+        for await (const part of request.parts()) {
+          if (part.type !== 'file' || !safeName(part.filename) || !acceptableMime(part.filename,part.mimetype) || names.has(part.filename) || part.filename === 'final.mp4') {
+            if (part.type === 'file') part.file.resume();
+            return await reject(400,'INVALID_UPLOAD');
+          }
+          if (part.filename !== 'episode.json' && part.filename !== 'narration.wav' && !/\.(png|jpe?g|webp|mp4|webm)$/i.test(part.filename)) {
+            part.file.resume();return await reject(400,'INVALID_UPLOAD');
+          }
+          names.add(part.filename);
+          let fileSize=0;
+          const limiter = new Transform({transform(chunk,encoding,callback){
+            total+=chunk.length;fileSize+=chunk.length;
+            if (total>MAX_TOTAL || (part.filename==='episode.json' && fileSize>MAX_JSON)) {
+              callback(Object.assign(new Error('Upload too large'),{statusCode:413}));
+            } else callback(null,chunk);
+          }});
+          await pipeline(part.file,limiter,createWriteStream(join(dir,part.filename),{flags:'wx',mode:0o600}));
+          if (part.file.truncated) return await reject(413,'UPLOAD_TOO_LARGE');
         }
-        if (part.filename !== 'episode.json' && part.filename !== 'narration.wav' && !/\.(png|jpe?g|webp|mp4|webm)$/i.test(part.filename)) {
-          part.file.resume();return await reject(400,'INVALID_UPLOAD');
-        }
-        names.add(part.filename);
-        let fileSize=0;
-        const limiter = new Transform({transform(chunk,encoding,callback){
-          total+=chunk.length;fileSize+=chunk.length;
-          if (total>MAX_TOTAL || (part.filename==='episode.json' && fileSize>MAX_JSON)) {
-            callback(Object.assign(new Error('Upload too large'),{statusCode:413}));
-          } else callback(null,chunk);
-        }});
-        await pipeline(part.file,limiter,createWriteStream(join(dir,part.filename),{flags:'wx',mode:0o600}));
-        if (part.file.truncated) return await reject(413,'UPLOAD_TOO_LARGE');
+        if (!names.has('episode.json')) return await reject(400,'MISSING_INPUT');
+        try {document=JSON.parse(await readFile(episodePath,'utf8'));} catch {return await reject(400,'INVALID_EPISODE');}
+      } else {
+        names.add('episode.json');
       }
-      if (!names.has('episode.json') || !names.has('narration.wav')) return await reject(400,'MISSING_INPUT');
-      let document:unknown;
-      try {document=JSON.parse(await readFile(join(dir,'episode.json'),'utf8'));} catch {return await reject(400,'INVALID_EPISODE');}
       const parsed = episodeSchema.safeParse(document);
       if (!parsed.success || parsed.data.audio.path !== 'narration.wav') return await reject(400,'INVALID_EPISODE');
-      const expected = new Set(['episode.json','narration.wav']);
+      const {audio, captions, script}=parsed.data;
+      const generated=audio.source==='google-tts';
+      if (generated && (names.has('narration.wav') || captions)) return await reject(400,'INVALID_EPISODE');
+      if (!generated && !names.has('narration.wav')) return await reject(400,'MISSING_INPUT');
+      if (!captions && script.length>MAX_TTS_SCRIPT_CHARS) return await reject(400,'INVALID_EPISODE');
+      const expected = new Set(generated ? ['episode.json'] : ['episode.json','narration.wav']);
       for (const asset of parsed.data.assets) {
         if (!safeName(asset.path) || expected.has(asset.path) || !names.has(asset.path)) return await reject(400,'INVALID_ASSET');
         const image = /\.(png|jpe?g|webp)$/i.test(asset.path);
@@ -158,6 +174,9 @@ export async function buildServer(options:ServerOptions) {
         expected.add(asset.path);
       }
       if (names.size !== expected.size) return await reject(400,'UNDECLARED_ASSET');
+      if (generated && !options.automation?.geminiApiKey?.trim()) return await reject(503,'TTS_UNCONFIGURED');
+      if (!captions && !options.automation?.alignment) return await reject(503,'CAPTIONS_UNCONFIGURED');
+      if (!isMultipart) await writeFile(episodePath,JSON.stringify(parsed.data),{flag:'wx',mode:0o600});
       const now = new Date().toISOString();
       const job:JobStatus={id,status:'pending',createdAt:now,updatedAt:now};
       await save(job);accepted=true;queue.push(id);startQueue();
@@ -173,15 +192,27 @@ export async function buildServer(options:ServerOptions) {
     if (!job) return reply.code(404).send({error:'JOB_NOT_FOUND'});
     return job;
   });
-  app.get<{Params:{id:string}}>('/v1/jobs/:id/video',async(request,reply)=>{
-    const id=request.params.id;
-    const job = UUID.test(id) ? jobs.get(id) : undefined;
-    if (!job) return reply.code(404).send({error:'JOB_NOT_FOUND'});
-    if (job.status !== 'completed') return reply.code(409).send({error:'VIDEO_NOT_READY'});
-    const output=join(jobsRoot,id,'final.mp4');
-    const st=await lstat(output);
-    if (!st.isFile() || st.isSymbolicLink()) return reply.code(404).send({error:'VIDEO_NOT_FOUND'});
-    return reply.type('video/mp4').header('content-disposition',`attachment; filename="${id}.mp4"`).send(createReadStream(output));
-  });
+  const downloads = [
+    {route:'video', file:'final.mp4', extension:'mp4', type:'video/mp4', code:'VIDEO'},
+    {route:'captions', file:'final.mp4.srt', extension:'srt', type:'application/x-subrip', code:'CAPTIONS'},
+    {route:'narration', file:'narration.wav', extension:'wav', type:'audio/wav', code:'NARRATION'},
+  ];
+  for (const download of downloads) {
+    app.get<{Params:{id:string}}>(`/v1/jobs/:id/${download.route}`,async(request,reply)=>{
+      const id=request.params.id;
+      const job = UUID.test(id) ? jobs.get(id) : undefined;
+      if (!job) return reply.code(404).send({error:'JOB_NOT_FOUND'});
+      if (job.status!=='completed' && !(download.route==='narration' && job.status==='failed')) {
+        return reply.code(409).send({error:`${download.code}_NOT_READY`});
+      }
+      const output=join(jobsRoot,id,download.file);
+      const st=await lstat(output).catch((error:NodeJS.ErrnoException)=>{
+        if (error.code!=='ENOENT') throw error;
+      });
+      if (!st?.isFile() || st.isSymbolicLink() || !st.size) return reply.code(404).send({error:`${download.code}_NOT_FOUND`});
+      return reply.type(download.type).header('content-length',st.size)
+        .header('content-disposition',`attachment; filename="${id}.${download.extension}"`).send(createReadStream(output));
+    });
+  }
   return app;
 }

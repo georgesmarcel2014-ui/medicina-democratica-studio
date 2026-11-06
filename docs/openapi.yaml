@@ -1,97 +1,91 @@
 openapi: 3.1.0
 info:
   title: Medicina Democrática Studio — API privada
-  version: 0.1.0
+  version: 0.2.0
   description: |
-    API implementada para upload, fila local, consulta e download autenticado.
-    Nenhuma integração ChatGPT está conectada. Para GPT Actions/conector, hospede
-    esta API em HTTPS com autenticação, limites e armazenamento privado; configure
-    a integração separadamente. O chat precisa de uma forma real de transferir o WAV
-    aprovado: URLs temporárias e anexos do chat não são automaticamente acessíveis.
-    O endpoint de download também exige Bearer; não é um link público ou assinado.
-    A API é para um único operador confiável; o mesmo token acessa todos os jobs.
-    Entradas, áudio e vídeos permanecem no STUDIO_JOBS_DIR privado. A retenção e a
-    exclusão são responsabilidade do operador. Reinício marca jobs pendentes/em
-    render como falhos (INTERRUPTED); não há execução distribuída ou retry automático.
+    API de operador único com fila local, consulta e downloads autenticados.
+    Um único token autoriza os trabalhos do estúdio. Arquivos ficam no diretório
+    privado STUDIO_JOBS_DIR. Após reinício, trabalhos pendentes ou ativos recebem INTERRUPTED.
 servers:
   - url: https://studio.example.invalid
-    description: Substitua por hospedagem HTTPS real; domínio ilustrativo, não operacional.
+    description: Endereço ilustrativo. Use a URL HTTPS da hospedagem.
 security:
   - StudioBearer: []
 paths:
   /:
     get:
       operationId: openStudio
-      summary: Abrir formulário de produção sem terminal
+      summary: Abrir o formulário de produção
       security: []
-      description: |
-        Página estática pública sem dados de produção. Solicita chave de acesso,
-        título, série, roteiro aprovado, WAV e arquivo JSON de legendas alinhadas.
-        Monta o episódio automaticamente, acompanha o job e baixa MP4 autenticado.
-        Não persiste token no navegador. Recursos personalizados são enviados pela
-        API nesta versão; o formulário usa cenas originais geradas automaticamente.
       responses:
         '200':
-          description: Formulário HTML com CSP, sem dependências externas
+          description: Formulário HTML para roteiro aprovado, WAV opcional e downloads
           content:
             text/html:
               schema: {type: string}
   /ui.js:
     get:
       operationId: studioInterfaceScript
-      summary: JavaScript estático da interface
+      summary: JavaScript do formulário
       security: []
       responses:
         '200':
-          description: Script sem dados de produção ou credenciais
+          description: Script estático
           content:
             application/javascript:
               schema: {type: string}
+  /healthz:
+    get:
+      operationId: checkStudioHealth
+      summary: Consultar a disponibilidade do processo
+      security: []
+      responses:
+        '200': {description: API inicializada}
   /v1/jobs:
     post:
       operationId: createProductionJob
-      summary: Enviar episódio aprovado e insumos privados
+      summary: Enfileirar produção a partir de roteiro aprovado
       description: |
-        Envie episode.json, narration.wav e todos os assets declarados no JSON.
-        audio.path deve ser exatamente narration.wav. Caminhos de assets precisam
-        ser basenames exclusivos (PNG/JPEG/WebP/MP4/WebM), nunca URLs ou diretórios.
-        Nomes aceitam letras ASCII, números, ponto, hífen e sublinhado; proíbem '..'.
-        Arquivos extras, duplicados e não declarados são rejeitados. O nome final.mp4
-        é reservado para a saída e não pode ser usado por um insumo.
-        JSON usa o esquema estrito src/shared/schema.ts: título, série, roteiro,
-        visualIdentity, WAV Google AI Studio aprovado, legendas temporizadas opcionais,
-        cenas e registro de origem/licença de assets. Sem legendas temporizadas, o
-        render exige alinhamento prévio conforme o pipeline, não inventa tempos.
-        Limites: 52 arquivos, 256 KiB no JSON, 256 MiB por arquivo, 512 MiB total;
-        recomenda-se definir limite de upload também no proxy HTTPS. Máximo de dez
-        uploads/jobs simultaneamente na fila e no render, um render de cada vez.
-        Aceitação 202 valida formato/arquivos; validação audiovisual ocorre no render.
+        Para gerar a narração, use application/json ou envie episode.json em
+        multipart. Declare audio.source google-tts, audio.path narration.wav e
+        audio.scriptApproved true. O servidor gera o WAV com Google TTS e as
+        legendas com reconhecimento local.
+        Para reutilizar um WAV, envie episode.json e narration.wav em multipart
+        com audio.source google-ai-studio e audio.approved true. Inclua
+        episode.captions para usar legendas já temporizadas.
+        Envie os assets declarados em multipart, com nomes de arquivo únicos,
+        sem caminhos ou URLs. final.mp4 é reservado para a saída.
+        Limites de upload são 52 arquivos, 256 KiB para episode.json, 256 MiB por
+        arquivo e 512 MiB somados. A fila aceita até dez uploads ou jobs ativos.
+        O áudio é validado após enfileirar e pode durar até 179 segundos.
       requestBody:
         required: true
         content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AutomatedEpisode'}
           multipart/form-data:
             schema:
               type: object
-              required: [episode, narration]
+              required: [episode]
               properties:
                 episode:
                   type: string
                   format: binary
-                  description: Arquivo chamado episode.json, application/json.
+                  description: episode.json conforme src/shared/schema.ts.
                 narration:
                   type: string
                   format: binary
-                  description: Arquivo chamado narration.wav, audio/wav; WAV definitivo aprovado.
+                  description: narration.wav, obrigatório para WAV definitivo enviado.
                 assets:
                   type: array
                   items: {type: string, format: binary}
-                  description: Insumos com nomes locais declarados em episode.assets.
+                  description: Mídias locais declaradas no episódio.
             encoding:
               episode: {contentType: application/json}
               narration: {contentType: audio/wav}
       responses:
         '202':
-          description: Job aceito para a fila local
+          description: Job aceito
           headers:
             Location:
               schema: {type: string}
@@ -100,44 +94,75 @@ paths:
               schema: {$ref: '#/components/schemas/Job'}
         '400': {$ref: '#/components/responses/InvalidInput'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '413': {description: Upload excede limite}
-        '415': {description: É necessário multipart/form-data}
-        '429': {description: Fila cheia; tente mais tarde}
+        '413': {description: Upload excede o limite}
+        '415': {description: Envie application/json ou multipart/form-data}
+        '429': {description: Fila cheia}
+        '503': {description: TTS ou alinhador automático indisponível na configuração do servidor}
   /v1/jobs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
     get:
       operationId: getProductionJob
-      summary: Consultar o estado de um job
-      parameters:
-        - $ref: '#/components/parameters/JobId'
+      summary: Consultar estado ou código de falha
       responses:
         '200':
-          description: Estado atual, sem conteúdo privado nem caminhos internos
+          description: Estado atual, sem conteúdo de produção
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Job'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {description: Job inexistente}
   /v1/jobs/{id}/video:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
     get:
       operationId: downloadProductionVideo
       summary: Baixar MP4 concluído
-      parameters:
-        - $ref: '#/components/parameters/JobId'
       responses:
         '200':
-          description: MP4 final como attachment, sem cache público
+          description: MP4 final como attachment
           content:
             video/mp4:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {description: Job ou vídeo inexistente}
         '409': {description: Vídeo ainda indisponível ou render falhou}
+  /v1/jobs/{id}/captions:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      operationId: downloadProductionCaptions
+      summary: Baixar o SRT do MP4 concluído
+      responses:
+        '200':
+          description: Legendas SRT como attachment
+          content:
+            application/x-subrip:
+              schema: {type: string, format: binary}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {description: Job ou legendas inexistentes}
+        '409': {description: Legendas finais ainda indisponíveis}
+  /v1/jobs/{id}/narration:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      operationId: downloadProductionNarration
+      summary: Recuperar o WAV de um job encerrado
+      responses:
+        '200':
+          description: WAV gerado ou enviado, como attachment
+          content:
+            audio/wav:
+              schema: {type: string, format: binary}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {description: Job ou narração inexistente}
+        '409': {description: Job ainda ativo}
 components:
   securitySchemes:
     StudioBearer:
       type: http
       scheme: bearer
-      description: STUDIO_API_TOKEN com pelo menos 32 bytes; nunca inserir no roteiro, repositório ou chat.
+      description: Token privado do estúdio configurado em STUDIO_API_TOKEN.
   parameters:
     JobId:
       name: id
@@ -145,6 +170,31 @@ components:
       required: true
       schema: {type: string, format: uuid}
   schemas:
+    AutomatedEpisode:
+      type: object
+      required: [title, series, script, visualIdentity, audio]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 140}
+        series: {type: string, enum: [noticias, historia, na-pratica]}
+        script: {type: string, minLength: 1, maxLength: 15000}
+        visualIdentity: {type: string, const: medicina-democratica}
+        audio:
+          type: object
+          required: [path, source, scriptApproved]
+          additionalProperties: false
+          properties:
+            path: {type: string, const: narration.wav}
+            source: {type: string, const: google-tts}
+            scriptApproved: {type: boolean, const: true}
+        instructions: {type: string, maxLength: 10000}
+        transcript: {type: string, minLength: 1}
+        scenes:
+          type: array
+          maxItems: 100
+          items: {type: object}
+          description: Cenas opcionais conforme src/shared/schema.ts, sem referência a assets.
+        assets: {type: array, maxItems: 0}
+      additionalProperties: false
     Job:
       type: object
       required: [id, status, createdAt, updatedAt]
@@ -154,7 +204,9 @@ components:
         status: {type: string, enum: [pending, rendering, completed, failed]}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
-        error: {type: string, enum: [RENDER_FAILED, INTERRUPTED]}
+        error:
+          type: string
+          enum: [TTS_FAILED, TTS_ACCESS_DENIED, TTS_RATE_LIMITED, NARRATION_TOO_LONG, INVALID_NARRATION, CAPTIONS_FAILED, CAPTIONS_MISMATCH, RENDER_FAILED, INTERRUPTED]
     Error:
       type: object
       required: [error]
@@ -162,7 +214,7 @@ components:
         error: {type: string}
   responses:
     InvalidInput:
-      description: JSON, upload ou caminho inválido; nenhum render enfileirado
+      description: JSON, upload ou caminho inválido
       content:
         application/json:
           schema: {$ref: '#/components/schemas/Error'}

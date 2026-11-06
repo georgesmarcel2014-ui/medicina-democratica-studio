@@ -2,9 +2,9 @@
 
 ## Contrato editorial
 
-Cada produção usa um JSON com título, série, roteiro aprovado, WAV definitivo, legendas ou transcrição, cenas e recursos visuais. O roteiro é material editorial fornecido pelo usuário: não existe geração automática de alegações médicas, verificação de fatos ou aprovação clínica neste pipeline.
+Cada produção parte de título, série e roteiro aprovado. O formulário define a especificação do episódio e monta as cenas. A API estruturada também recebe cenas e recursos visuais. A aprovação médico-editorial do roteiro é responsabilidade do operador.
 
-O WAV deve ser o áudio final aprovado do Google AI Studio. Declare `audio.source: "google-ai-studio"` e `audio.approved: true`. Essa declaração registra a confirmação do responsável; o software não consegue provar a origem do arquivo. O render não faz TTS, aceleração, reordenação ou corte de narração. Acima de 179 segundos, entregue um novo WAV aprovado. Não tente adequar o áudio automaticamente ao limite.
+Para gerar a voz no servidor, declare `audio.source: "google-tts"`, `audio.scriptApproved: true` e `audio.path: "narration.wav"`. Para reutilizar um WAV definitivo, declare `audio.source: "google-ai-studio"` e `audio.approved: true` e envie o arquivo. O áudio é usado integralmente. Se passar de 179 segundos, envie um roteiro mais curto ou um WAV definitivo dentro do limite.
 
 ## Exemplo estrutural
 
@@ -55,7 +55,7 @@ Este exemplo mostra o formato, não inclui áudio e não constitui um episódio 
 
 ## Legendas e alinhamento
 
-As legendas temporizadas são independentes do áudio. É possível corrigir grafia e pontuação no JSON e renderizar novamente, mantendo o WAV original. Intervalos por palavra fornecem destaque sincronizado; divisão uniforme de texto não é alinhamento acústico.
+Quando o trabalho não inclui legendas prontas, o servidor reconhece a fala em português no WAV com faster-whisper e usa os intervalos de cada palavra para o destaque sincronizado. O alinhamento roda localmente. Você também pode corrigir grafia e pontuação em legendas revisadas e renderizar com o mesmo WAV.
 
 Cada bloco de legenda aceita no máximo **95 caracteres**. Blocos maiores são rejeitados para preservar legibilidade e área segura. Divida-os em blocos com tempos revisados, sem alterar a narração nem gerar tempos artificiais. O limite é por bloco, não por roteiro.
 
@@ -67,9 +67,7 @@ npm run align -- --input /caminho/privado/whisperx.json --output /caminho/privad
 
 A entrada segue o formato `{"segments":[{"text":"Texto aprovado.","start":0,"end":1,"words":[{"word":"Texto","start":0,"end":0.5},{"word":"aprovado.","start":0.5,"end":1}]}]}`. Incorpore o array JSON resultante em `episode.captions`.
 
-O importador não executa um modelo acústico nem comprova que as palavras correspondem ao WAV. Gerar esse alinhamento requer instalação e execução separada do modelo, ou marcação temporal aprovada pelo responsável. Essa separação evita tornar GPU, modelos e downloads obrigatórios para renderizar legendas já temporizadas.
-
-Não envie áudio privado a serviços externos por padrão. Revise transcrição, tempos e termos médicos antes de publicar. Consulte o relatório de validação para distinguir importação testada e reconhecimento de voz não executado.
+O importador preserva os tempos calculados no WhisperX. Para legendas automáticas no estúdio, o contêiner já inclui o modelo usado pelo servidor. Revise transcrição, tempos e termos médicos antes de publicar.
 
 ## Conferência do resultado
 

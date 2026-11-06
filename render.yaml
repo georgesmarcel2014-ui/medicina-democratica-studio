@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: medicina-democratica-studio
+    runtime: docker
+    plan: 1c-2g
+    autoDeployTrigger: 'off'
+    healthCheckPath: /healthz
+    disk:
+      name: studio-jobs
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: STUDIO_API_TOKEN
+        generateValue: true
