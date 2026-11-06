@@ -15,7 +15,8 @@
     "validate": "node --import tsx src/pipeline/cli.ts validate",
     "align": "node --import tsx src/pipeline/cli.ts align",
     "studio": "remotion studio src/video/index.ts",
-    "api": "node --import tsx src/api/server.ts"
+    "api": "node --import tsx src/api/server.ts",
+    "tts": "node --import tsx src/pipeline/tts-cli.ts"
   },
   "dependencies": {
     "@fastify/multipart": "9.3.0",

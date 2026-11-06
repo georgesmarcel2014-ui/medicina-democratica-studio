@@ -29,6 +29,14 @@ npm run render -- --input /caminho/privado/episode.json --output /caminho/privad
 
 Em servidores sem navegador descoberto automaticamente, configure `CHROME_PATH` para o executável do Chromium/Chrome. Arquivos de produção devem ficar fora do checkout ou em diretórios ignorados. Os caminhos de mídia do episódio são resolvidos a partir do diretório do JSON de entrada.
 
+## Narração TTS via Google AI Studio
+
+Foi adicionado um comando administrativo para gerar WAV automaticamente a partir de roteiro aprovado, usando a API Google Gemini TTS (sem Runway):
+
+    npm run tts -- --input /caminho/privado/roteiro-aprovado.txt --output /caminho/privado/narration.wav
+
+Configure GEMINI_API_KEY como segredo **no servidor/worker**. Não exponha a chave no GitHub nem no formulário. Este módulo de geração está implementado e testado com respostas simuladas; uma chamada real exige credenciais/cota e não foi efetuada aqui. A geração TTS ainda não está conectada ao formulário, ao alinhamento automático de legendas nem ao fluxo ChatGPT completo. Veja [TTS automatizado e plano de integração](docs/automated-tts.md).
+
 ## Formulário de produção
 
 O administrador configura `STUDIO_API_TOKEN` (pelo menos 32 caracteres) e `STUDIO_JOBS_DIR` para uma pasta privada e inicia o serviço com `npm run api`. O serviço usa a porta 8787 e escuta em loopback por padrão. Configure hospedagem HTTPS protegida antes de oferecer acesso remoto.
