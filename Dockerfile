@@ -2,7 +2,9 @@ FROM node:24-bookworm-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates chromium curl ffmpeg fonts-liberation gosu libgomp1 python3-venv tini \
+       ca-certificates curl ffmpeg fonts-liberation gosu libgomp1 python3-venv tini \
+       libasound2 libatk-bridge2.0-0 libatk1.0-0 libcairo2 libcups2 libdbus-1-3 libexpat1 \
+       libgbm1 libnss3 libpango-1.0-0 libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY deploy/requirements-asr.txt /tmp/requirements-asr.txt
@@ -23,6 +25,14 @@ WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci --include=dev --no-audit --no-fund \
     && install -d -o node -g node /app/node_modules/.cache
+RUN node --input-type=module -e '\
+    import {ensureBrowser} from "@remotion/renderer"; \
+    import {rename} from "node:fs/promises"; \
+    import {dirname} from "node:path"; \
+    const browser = await ensureBrowser(); \
+    if (!browser.path) throw new Error("Chromium Headless Shell indisponível"); \
+    await rename(dirname(browser.path), "/opt/studio-browser");' \
+    && /opt/studio-browser/chrome-headless-shell --version
 COPY src ./src
 COPY deploy/transcribe.py ./deploy/transcribe.py
 
@@ -32,7 +42,7 @@ ENV NODE_ENV=production \
     STUDIO_JOBS_DIR=/var/data/jobs \
     STUDIO_ASR_PYTHON=/opt/studio-asr/bin/python \
     STUDIO_WHISPER_MODEL=/opt/studio-whisper \
-    CHROME_PATH=/usr/bin/chromium
+    CHROME_PATH=/opt/studio-browser/chrome-headless-shell
 EXPOSE 10000
 
 ENTRYPOINT ["tini", "--"]

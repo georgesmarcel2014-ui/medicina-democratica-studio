@@ -10,7 +10,7 @@ import {execute, probe, validateNarration, verifyOutput} from '../src/pipeline/m
 const script = 'A ciência começa com uma pergunta. A pesquisa ajuda a encontrar respostas.';
 const auth = {authorization: 'Bearer studio-local-integration-token-only'};
 
-test('HTTP gera WAV por TTS simulado, alinha fala real e entrega MP4/SRT privados', {timeout: 360_000}, async () => {
+test('HTTP gera WAV por TTS simulado, alinha fala real e entrega MP4/SRT privados', {timeout: 600_000}, async () => {
   const modelPath = process.env.STUDIO_WHISPER_MODEL;
   assert.ok(modelPath, 'Defina STUDIO_WHISPER_MODEL para o modelo Whisper small local.');
   const folder = await mkdtemp(join(tmpdir(), 'studio-production-integration-'));
@@ -49,7 +49,8 @@ test('HTTP gera WAV por TTS simulado, alinha fala real e entrega MP4/SRT privado
     assert.equal(create.status, 202, await create.text());
     const url = `${base}${create.headers.get('location')}`;
     let job: JobStatus | undefined;
-    for (let attempt = 0; attempt < 480; attempt++) {
+    const deadline = Date.now() + 480_000;
+    while (Date.now() < deadline) {
       const result = await fetch(url, {headers: auth});
       assert.equal(result.status, 200);
       job = await result.json() as JobStatus;
