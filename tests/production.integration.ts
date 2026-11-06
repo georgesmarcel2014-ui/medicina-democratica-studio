@@ -6,8 +6,6 @@ import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {buildServer, type JobStatus} from '../src/api/app';
 import {execute, probe, validateNarration, verifyOutput} from '../src/pipeline/media';
-import {renderEpisode} from '../src/pipeline/render';
-import type {ProductionOptions} from '../src/pipeline/prepare';
 
 const script = 'A ciência começa com uma pergunta. A pesquisa ajuda a encontrar respostas.';
 const auth = {authorization: 'Bearer studio-local-integration-token-only'};
@@ -17,7 +15,9 @@ test('HTTP gera WAV por TTS simulado, alinha fala real e entrega MP4/SRT privado
   assert.ok(modelPath, 'Defina STUDIO_WHISPER_MODEL para o modelo Whisper small local.');
   const folder = await mkdtemp(join(tmpdir(), 'studio-production-integration-'));
   let calls = 0;
-  const automation: ProductionOptions = {
+  const app = await buildServer({
+    token: auth.authorization.slice('Bearer '.length), jobsRoot: join(folder, 'jobs'),
+    automation: {
       geminiApiKey: 'test-key-only',
       alignment: {modelPath, python: process.env.STUDIO_ASR_PYTHON ?? 'python3'},
       googleFetch: async (url, options) => {
@@ -30,17 +30,6 @@ test('HTTP gera WAV por TTS simulado, alinha fala real e entrega MP4/SRT privado
           {inlineData: {mimeType: 'audio/L16;rate=24000', data: pcm.toString('base64')}},
         ]}}]});
       },
-  };
-  const app = await buildServer({
-    token: auth.authorization.slice('Bearer '.length), jobsRoot: join(folder, 'jobs'), automation,
-    render: async (input, output) => {
-      try {
-        return await renderEpisode(input, output, automation);
-      } catch (error) {
-        // Only synthetic fixtures reach this diagnostic in CI.
-        console.error(error);
-        throw error;
-      }
     },
   });
   try {

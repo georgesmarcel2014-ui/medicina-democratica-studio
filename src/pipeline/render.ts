@@ -33,7 +33,7 @@ async function render(props:EpisodeProps,outputPath:string,media?:{audioFile:str
   const serveUrl=await bundle({entryPoint:fileURLToPath(new URL('../video/index.ts',import.meta.url)),publicDir,outDir:path.join(work,'bundle')});
   const browserExecutable=await browser();
   const composition=await selectComposition({serveUrl,id:'MedicinaDemocratica',inputProps,browserExecutable});
-  await renderMedia({composition,serveUrl,inputProps,codec:'h264',audioCodec:'aac',outputLocation:path.join(work,'video.mp4'),muted:true,browserExecutable,concurrency:2,crf:18,pixelFormat:'yuv420p',overwrite:true,chromiumOptions:{gl:'swangle'},onProgress:({progress})=>{if(progress===1)console.log('Renderização concluída.');}});
+  await renderMedia({composition,serveUrl,inputProps,codec:'h264',audioCodec:'aac',outputLocation:path.join(work,'video.mp4'),muted:true,browserExecutable,concurrency:1,crf:18,pixelFormat:'yuv420p',overwrite:true,chromiumOptions:{gl:'swangle'},onProgress:({progress})=>{if(progress===1)console.log('Renderização concluída.');}});
   if(media){
    await execute('ffmpeg',['-v','error','-i',path.join(work,'video.mp4'),'-i',media.audioFile,'-map','0:v:0','-map','1:a:0','-c:v','copy','-c:a','aac','-b:a','192k','-movflags','+faststart',temporary],{timeout:180000,maxBuffer:2*1024*1024});
   }else{await copyFile(path.join(work,'video.mp4'),temporary);}
