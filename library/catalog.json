@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "originalResources": [
+    {
+      "id": "md-procedural-visuals",
+      "type": "source-code",
+      "path": "src/video",
+      "origin": "Criado neste projeto; formas e animações procedurais originais",
+      "license": "MIT",
+      "attribution": "Medicina Democrática Studio",
+      "thirdPartyMediaIncluded": false,
+      "notes": "Sem personagens, texturas, mapas ou fotografias de catálogos externos incorporados."
+    }
+  ],
+  "externalCatalogs": [
+    {
+      "name": "Quaternius",
+      "url": "https://quaternius.com/",
+      "status": "not-imported",
+      "licenseVerification": "Verificar por pacote e manter evidência antes de baixar/redistribuir."
+    },
+    {
+      "name": "Kenney",
+      "url": "https://kenney.nl/assets",
+      "status": "not-imported",
+      "licenseVerification": "Verificar por pacote e manter evidência antes de baixar/redistribuir."
+    },
+    {
+      "name": "Poly Haven",
+      "url": "https://polyhaven.com/",
+      "status": "not-imported",
+      "licenseVerification": "Verificar licença e termos da distribuição/API antes do uso."
+    }
+  ]
+}

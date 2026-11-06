@@ -1,0 +1,11 @@
+node_modules/
+outputs/
+.private/
+.env
+.env.*
+!.env.example
+*.wav
+*.mp4
+*.blend
+*.log
+coverage/
