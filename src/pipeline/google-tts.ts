@@ -1,4 +1,4 @@
-import {mkdir, rename, rm, writeFile} from 'node:fs/promises';
+import {link, mkdir, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {MAX_DURATION} from '../shared/schema';
@@ -80,7 +80,7 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
     throw new Error('Google TTS falhou (HTTP ' + response.status + '). Confira chave, cota e modelo.');
   }
   const result: unknown = await response.json();
-  const data = result as {
+  const data = (result && typeof result === 'object' ? result : {}) as {
     candidates?: Array<{content?: {parts?: Array<{inlineData?: {data?: string; mimeType?: string}}>} }>;
   };
   const audio = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.data)?.inlineData;
@@ -115,7 +115,8 @@ export async function generateGoogleTtsFile(options: GoogleTtsOptions, outputPat
   try {
     await writeFile(temporary, wav, {mode: 0o600, flag: 'wx'});
     const duration = validateNarration(await probe(temporary));
-    await rename(temporary, absolute);
+    // Exclusive atomic publication; never overwrite a previously approved WAV.
+    await link(temporary, absolute);
     return {duration, file: absolute, model: options.model ?? DEFAULT_TTS_MODEL, voice: options.voice ?? DEFAULT_TTS_VOICE};
   } finally {
     await rm(temporary, {force: true});
