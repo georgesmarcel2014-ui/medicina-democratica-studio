@@ -1,14 +1,20 @@
 # Produção pelo Android
 
-Envie no ChatGPT Work uma ordem com título, série e roteiro integral aprovado. O Work gera a voz no Google AI Studio, sincroniza as legendas, renderiza um episódio por vez e devolve o MP4 para download na conversa. As séries disponíveis são Na Prática, Notícias e História.
+Envie no ChatGPT Work uma ordem com título, série e roteiro integral aprovado. O Work gera a voz no Google AI Studio, sincroniza as legendas, renderiza um episódio por vez e devolve MP4, WAV e SRT para download na conversa, com a descrição do Instagram em um bloco para copiar. As séries disponíveis são Na Prática, Notícias e História.
 
-> Produzir um episódio de Na Prática com o título “Título do vídeo”. Roteiro aprovado abaixo.
+> Produza um episódio da Medicina Democrática com o título “[título]”, na série “[série]”. Use o roteiro aprovado abaixo e os insumos anexados. Entregue o MP4 vertical, o WAV Charon, o SRT e a descrição do Instagram em bloco.
 
 ## Fluxo no Work
 
-1. Use o Gemini 2.5 Flash Preview TTS no Google AI Studio, com uma única voz e a cota gratuita. Uma sessão Google autorizada pode usar o playground gratuito com nenhuma chave selecionada. Se o Google exigir uma chave paga, encerre a geração.
+1. Selecione Gemini 2.5 Flash Preview TTS e confirme **Charon** no Google AI Studio. Use a cota gratuita. Uma sessão Google autorizada pode usar o playground com nenhuma chave selecionada. Se o Google exigir uma chave paga, encerre a geração.
 2. Baixe o WAV gerado e mantenha o texto aprovado no campo `script` do episódio. Para uma narração já aprovada, use o WAV original. Em ambos os casos, declare `audio: {"path":"narration.wav","source":"google-ai-studio","approved":true}` no JSON e mantenha o WAV ao lado dele. Use uma pasta privada por ordem.
-3. Execute `produce` e revise as legendas contra o texto e a fala. O alinhador mede a fala no WAV e o render gera cenas pela série quando `scenes` está vazio. Envie o MP4 e, se solicitado, o SRT para download. Se o texto da fala divergir do roteiro, revise o WAV antes de entregar.
+3. Execute `produce` e revise as legendas contra o texto e a fala. O alinhador mede a fala no WAV. Defina os cortes a partir dessas marcas e do significado de cada trecho. Se o texto da fala divergir do roteiro, revise o WAV antes de entregar.
+
+### Preset Charon
+
+No compositor, preencha **Audio Profile** com um narrador masculino maduro, natural em português brasileiro, seguro e caloroso, com pronúncia clara de nomes e termos médicos. Em **Scene**, dirija a abertura com curiosidade e urgência contida, acelere durante a investigação, faça pausas nas revelações e fale a última frase diretamente ao ouvinte. Use o bloco de fala para o roteiro aprovado e confirme **Charon** na ficha do locutor antes de rodar. O preset da API mantém as instruções fora da seção `Transcript`.
+
+Para História com gravuras, B-roll ou animações verticais, use `"layout": "documental"` no manifesto. Cada plano pode receber seu crédito no recurso de mídia. Nas legendas alinhadas, marque `"emphasis": true` apenas nos termos que merecem destaque. Mantenha a fala à frente da trilha e dos efeitos, valide o MP4 completo e entregue o WAV do Google junto ao SRT.
 
 ### Preparação do ambiente
 

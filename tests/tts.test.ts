@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {generateGoogleTts, DEFAULT_TTS_MODEL} from '../src/pipeline/google-tts';
+import {generateGoogleTts, DEFAULT_TTS_MODEL, CHARON_AUDIO_PROFILE, CHARON_DIRECTION} from '../src/pipeline/google-tts';
 
 const oneSecond = Buffer.alloc(24_000 * 2);
 function responseFor(pcm: Buffer, mimeType = 'audio/L16;rate=24000') {
@@ -19,7 +19,10 @@ test('Google AI Studio TTS converte PCM 24 kHz para WAV sem cortar ou acelerar',
       assert.match(String(url), /gemini-2\.5-flash-preview-tts:generateContent/);
       assert.equal(new Headers(init?.headers).get('x-goog-api-key'), 'segredo-de-teste-nao-real');
       const payload = JSON.parse(String(init?.body));
-      assert.equal(payload.contents[0].parts[0].text, 'A ciência transforma vidas.');
+      const prompt = payload.contents[0].parts[0].text;
+      assert.ok(prompt.includes(CHARON_AUDIO_PROFILE));
+      assert.ok(prompt.includes(CHARON_DIRECTION));
+      assert.equal(prompt.split('# Transcript\n')[1], 'A ciência transforma vidas.');
       assert.equal(payload.generationConfig.speechConfig.languageCode, 'pt-BR');
       assert.equal(payload.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, 'Charon');
       return responseFor(oneSecond);
@@ -49,10 +52,11 @@ test('Google AI Studio TTS preserva WAV já encapsulado', async () => {
   assert.deepEqual(output, source);
 });
 
-test('TTS rejeita roteiro vazio, credencial ausente e modelo suspeito', async () => {
+test('TTS rejeita roteiro vazio, credencial ausente, modelo suspeito e outra voz', async () => {
   await assert.rejects(generateGoogleTts({script: '  ', apiKey: 'x'}), /Roteiro TTS vazio/);
   await assert.rejects(generateGoogleTts({script: 'Teste', apiKey: ''}), /GEMINI_API_KEY/);
   await assert.rejects(generateGoogleTts({script: 'Teste', apiKey: 'x', model: '../outro'}), /Modelo Google TTS inválido/);
+  await assert.rejects(generateGoogleTts({script: 'Teste', apiKey: 'x', voice: 'Zephyr'}), /voz de produção deve ser Charon/);
 });
 
 test('TTS rejeita áudio sem payload e limita duração de 179 segundos', async () => {

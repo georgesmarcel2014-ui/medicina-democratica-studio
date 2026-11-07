@@ -72,14 +72,14 @@ function Headline({scene,frame,accent}:{scene:Scene;frame:number;accent:string})
   </div>;
 }
 
-function SceneVisual({scene,props,frame,accent}:{scene:Scene;props:EpisodeProps;frame:number;accent:string}) {
+function SceneVisual({scene,props,frame,accent,documentary=false}:{scene:Scene;props:EpisodeProps;frame:number;accent:string;documentary?:boolean}) {
   const asset=props.episode.assets.find(a=>a.id===scene.assetId);
   const path=asset?props.assetSources[asset.id]:undefined;
   const src=path?staticFile(path):undefined;
   if(asset&&src) return <div style={{position:'relative',height:'100%',width:'100%',overflow:'hidden'}}>
     {asset.type==='image'?<Img src={src} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<Sequence from={Math.round(scene.start*30)} durationInFrames={Math.max(1,Math.ceil((scene.end-scene.start)*30))} layout="none"><OffthreadVideo src={src} muted style={{width:'100%',height:'100%',objectFit:'cover'}}/></Sequence>}
-    <div style={{position:'absolute',inset:0,background:'linear-gradient(0deg, #081d25aa, transparent 45%)'}}/>
-    <div style={{position:'absolute',left:28,bottom:24,right:28,fontSize:18,color:'white',textShadow:'0 1px 6px black'}}>{asset.origin} · {asset.license}</div>
+    {!documentary&&<div style={{position:'absolute',inset:0,background:'linear-gradient(0deg, #081d25aa, transparent 45%)'}}/>}
+    {!documentary&&<div style={{position:'absolute',left:28,bottom:24,right:28,fontSize:18,color:'white',textShadow:'0 1px 6px black'}}>{asset.origin} · {asset.license}</div>}
   </div>;
   if(scene.visual==='clinic') return <div style={{height:'100%',position:'relative',background:'#e9f0e9'}}><Clinic3D time={frame/30} accent={accent}/><div style={{position:'absolute',left:28,bottom:22,fontSize:20,fontWeight:700,letterSpacing:1.3,color:'#244b55'}}>ANIMAÇÃO 3D ILUSTRATIVA · MODELOS ORIGINAIS</div></div>;
   if(scene.visual==='chart') return <Chart scene={scene} frame={frame} accent={accent}/>;
@@ -96,6 +96,31 @@ export const EpisodeVideo: React.FC<EpisodeProps> = (props) => {
   const sceneFrame=scene?frame-Math.round(scene.start*fps):frame;
   const caption=props.captions.find(c=>c.start<=t&&c.end>t);
   const sceneOpacity=scene?interpolate(sceneFrame,[0,8],[0,1],{extrapolateRight:'clamp'}):1;
+  if(props.episode.layout==='documental'){
+    const asset=props.episode.assets.find(a=>a.id===scene?.assetId);
+    const subtitle=caption?.words?.length?caption.words.map((word,i)=><React.Fragment key={i}>
+      <span style={{color:word.emphasis?theme.accent:undefined}}>{word.text}</span>{' '}
+    </React.Fragment>):caption?.text;
+    return <AbsoluteFill style={{background:theme.bg,color:'#fff6e8',fontFamily:font}}>
+      {scene&&<SceneVisual key={scene.id} scene={scene} props={props} frame={sceneFrame} accent={theme.accent} documentary/>}
+      <AbsoluteFill style={{background:'linear-gradient(180deg,#100c0bc9 0%,transparent 21%,transparent 56%,#100c0bdd 79%,#100c0b 100%)'}}/>
+      <div style={{position:'absolute',left:76,right:165,top:113,textShadow:'0 2px 10px #000'}}>
+        <Label color={theme.accent}>{theme.label} · MEDICINA DEMOCRÁTICA</Label>
+        {scene?.body&&<div style={{fontSize:30,fontWeight:600,marginTop:19,lineHeight:1.2}}>{scene.body}</div>}
+      </div>
+      {caption&&<div style={{position:'absolute',left:92,right:156,top:1400,fontSize:54,lineHeight:1.13,fontWeight:750,
+        textAlign:'center',textWrap:'balance',textShadow:'0 2px 8px #080606, 0 2px 2px #080606'}}>
+        {subtitle}
+      </div>}
+      {asset&&<div style={{position:'absolute',left:82,right:155,top:1635,fontSize:20,color:'#e4d5c3',lineHeight:1.25}}>
+        {asset.origin} · {asset.license}
+      </div>}
+      <div style={{position:'absolute',left:80,right:150,top:1695,height:4,background:'#ffffff38'}}>
+        <div style={{height:'100%',width:`${100*(frame+1)/durationInFrames}%`,background:theme.accent}}/>
+      </div>
+      {props.audioSrc&&<Audio src={staticFile(props.audioSrc)}/>}
+    </AbsoluteFill>;
+  }
   const captions=caption?.words?.length?caption.words.map((word,i)=><React.Fragment key={i}><span style={{color:t>=word.start&&t<word.end?theme.accent:'white'}}>{word.text}</span>{' '}</React.Fragment>):caption?.text;
   return <AbsoluteFill style={{background:theme.bg,fontFamily:font,color:'#f4f7f3'}}>
     <AbsoluteFill style={{backgroundImage:`radial-gradient(ellipse at 100% 0%, ${theme.accent}18, transparent 60%), linear-gradient(${theme.accent}06 1px, transparent 1px), linear-gradient(90deg, ${theme.accent}06 1px, transparent 1px)`,backgroundSize:'auto, 80px 80px, 80px 80px',backgroundPosition:`0 0, 0 ${frame*.15}px, 0 ${frame*.15}px`}}/>

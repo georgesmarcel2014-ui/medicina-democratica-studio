@@ -6,7 +6,7 @@ import {NarrationTooLongError, probe, validateNarration} from './media';
 
 /**
  * Google AI Studio / Gemini API TTS. No other voice provider is used.
- * The script is sent verbatim; the generated WAV is never cut, sped up or normalized.
+ * The approved transcript is kept separate from direction in the prompt.
  */
 export type GoogleTtsOptions = {
   script: string;
@@ -18,6 +18,8 @@ export type GoogleTtsOptions = {
 
 export const DEFAULT_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 export const DEFAULT_TTS_VOICE = 'Charon';
+export const CHARON_AUDIO_PROFILE = 'Narrador masculino maduro em português brasileiro natural, documental, seguro, caloroso e articulado. Tom investigativo, com variação de entonação, emoção contida e pronúncia clara dos nomes e termos médicos.';
+export const CHARON_DIRECTION = 'Comece próximo, com curiosidade genuína e urgência contida. Ganhe pulso durante a investigação. Dê ênfase seletiva às pistas e deixe pausas breves nas revelações. Desacelere nas passagens que pedem clareza e conduza a última frase diretamente ao ouvinte. Fale somente o roteiro, com todas as palavras na ordem original.';
 export class GoogleTtsHttpError extends Error {
   constructor(readonly status: number) {
     super(`Google TTS falhou (HTTP ${status}). Confira chave, cota e modelo.`);
@@ -58,7 +60,8 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
   const model = options.model ?? DEFAULT_TTS_MODEL;
   const voice = options.voice ?? DEFAULT_TTS_VOICE;
   if (!/^gemini-[a-z0-9.-]+-tts(?:-preview)?$/.test(model)) throw new Error('Modelo Google TTS inválido.');
-  if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(voice)) throw new Error('Nome de voz Google inválido.');
+  if (voice !== DEFAULT_TTS_VOICE) throw new Error('A voz de produção deve ser Charon.');
+  const directedTranscript = `# Audio Profile\n${CHARON_AUDIO_PROFILE}\n\n# Director's Notes\n${CHARON_DIRECTION}\n\n# Transcript\n${script}`;
 
   // Google Gemini generateContent (legacy), compatible with Gemini 2.5 TTS.
   const response = await (options.fetchImpl ?? fetch)(
@@ -67,7 +70,7 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
       method: 'POST',
       headers: {'content-type': 'application/json', 'x-goog-api-key': options.apiKey},
       body: JSON.stringify({
-        contents: [{parts: [{text: script}]}],
+        contents: [{parts: [{text: directedTranscript}]}],
         generationConfig: {
           responseModalities: ['AUDIO'],
           speechConfig: {
