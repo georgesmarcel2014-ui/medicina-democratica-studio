@@ -33,6 +33,16 @@ test('não inventa alinhamento proporcional quando há apenas transcrição',()=
  assert.throws(()=>prepareCaptions(episode({transcript:'Saúde para todos.'}),2),/timestamps/);
 });
 
+test('preserva o texto do bloco quando o reconhecedor arredonda uma palavra para zero',()=>{
+ const [caption]=captionsFromSpeech([
+  {text:'ser',start:0.3,end:0.3},{text:'anestesiologista',start:0.3,end:1.2}
+ ],'Ser anestesiologista.',1.3);
+ assert.equal(caption.text,'Ser anestesiologista.');
+ assert.equal(caption.start,0.3);
+ assert.equal(caption.end,1.2);
+ assert.equal(caption.words,undefined);
+});
+
 test('preserva tempos e correções editoriais das legendas aprovadas',()=>{
  const edited=[{text:'Grafia corrigida na legenda.',start:0.2,end:1.9}];
  assert.deepEqual(prepareCaptions(episode({captions:edited}),2),edited);

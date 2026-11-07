@@ -1,4 +1,4 @@
-import {link, mkdir, rm, writeFile} from 'node:fs/promises';
+import {link, lstat, mkdir, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {MAX_DURATION, MAX_TTS_SCRIPT_CHARS} from '../shared/schema';
@@ -114,9 +114,13 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
  * temporary audio left behind after a failed validation.
  */
 export async function generateGoogleTtsFile(options: GoogleTtsOptions, outputPath: string) {
-  const wav = await generateGoogleTts(options);
   const absolute = path.resolve(outputPath);
   if (path.extname(absolute).toLowerCase() !== '.wav') throw new Error('Saída TTS deve ter extensão .wav.');
+  const existing = await lstat(absolute).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'ENOENT') throw error;
+  });
+  if (existing) throw new Error('A narração já existe. Para reutilizá-la, use o modo de WAV aprovado.');
+  const wav = await generateGoogleTts(options);
   await mkdir(path.dirname(absolute), {recursive: true, mode: 0o700});
   const temporary = absolute + '.' + randomUUID() + '.tmp';
   try {

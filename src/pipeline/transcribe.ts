@@ -8,7 +8,9 @@ export type AlignmentOptions = {python: string; modelPath: string};
 export class TranscriptMismatchError extends Error {}
 
 const transcriptionScript = fileURLToPath(new URL('../../deploy/transcribe.py', import.meta.url));
-const wordsSchema = z.array(wordSchema).max(3000);
+const speechWordSchema = z.object({...wordSchema.shape, end: z.number().finite().nonnegative()}).strict()
+  .refine(word => word.end >= word.start, 'Intervalo de fala invertido');
+const wordsSchema = z.array(speechWordSchema).max(3000);
 type Word = z.infer<typeof wordSchema>;
 
 function lexicalWords(text: string) {
@@ -46,8 +48,13 @@ export function captionsFromSpeech(raw: unknown, script: string, duration: numbe
   let group: Word[] = [];
   let previousEnd = 0;
   const finishGroup = () => {
+    const timed = group.filter(word => word.end > word.start);
+    if (!timed.length) return;
     const text = group.map(word => word.text).join(' ');
-    captions.push(captionSchema.parse({text, start: group[0].start, end: group[group.length - 1].end, words: group}));
+    // Whisper can return a collapsed interval for a short word. Keep the text
+    // and the timed cue, with word highlighting only when every word has a time.
+    const words = timed.length === group.length ? timed : undefined;
+    captions.push(captionSchema.parse({text, start: timed[0].start, end: timed[timed.length - 1].end, words}));
     group = [];
   };
 
@@ -55,7 +62,8 @@ export function captionsFromSpeech(raw: unknown, script: string, duration: numbe
     // Whisper rounds timestamps; only clip minor boundary differences, never invent word timings.
     const start = Math.max(previousEnd, word.start);
     const end = Math.min(duration, word.end);
-    if (start - word.start > 0.08 || word.end - end > 0.08 || end <= start) {
+    if (start - word.start > 0.08 || word.end - end > 0.08 ||
+        end < start || (end === start && word.end > word.start)) {
       throw new Error('O alinhador retornou tempos de palavras inconsistentes.');
     }
     const text = useApprovedSpelling ? approved[index] : word.text;
@@ -66,6 +74,7 @@ export function captionsFromSpeech(raw: unknown, script: string, duration: numbe
     if (/[.!?]$/.test(text)) finishGroup();
   }
   if (group.length) finishGroup();
+  if (group.length) throw new Error('O alinhador retornou um bloco de legenda sem duração.');
   return validateCaptions(captions, duration);
 }
 

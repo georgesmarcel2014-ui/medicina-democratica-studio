@@ -13,6 +13,7 @@
     "test": "node --import tsx --test --test-isolation=none tests/*.test.ts",
     "demo": "node --import tsx src/pipeline/cli.ts demo",
     "render": "node --import tsx src/pipeline/cli.ts render",
+    "produce": "node --import tsx src/pipeline/cli.ts produce",
     "validate": "node --import tsx src/pipeline/cli.ts validate",
     "align": "node --import tsx src/pipeline/cli.ts align",
     "studio": "remotion studio src/video/index.ts",

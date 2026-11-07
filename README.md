@@ -6,6 +6,10 @@ O estúdio monta as cenas, valida e renderiza MP4 H.264 em 1080 × 1920 a 30 FPS
 
 [Baixar demonstração MP4 silenciosa (10 segundos)](examples/showcase/demo.mp4) · [Relatório de validação](docs/validation.md)
 
+## Produção pelo celular
+
+O [guia do Android](docs/mobile.md) descreve a produção de um episódio por vez no ChatGPT Work e o notebook Colab gratuito de reserva. Os dois usam o pipeline existente e entregam MP4 vertical e SRT.
+
 ## Começar
 
 Requisitos: Node.js 24, npm, FFmpeg/ffprobe no `PATH` e Chromium/Chrome. Não é necessário Blender para o primeiro render.
