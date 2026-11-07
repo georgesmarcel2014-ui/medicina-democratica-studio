@@ -108,9 +108,10 @@ export const EpisodeVideo: React.FC<EpisodeProps> = (props) => {
         <Label color={theme.accent}>{theme.label} · MEDICINA DEMOCRÁTICA</Label>
         {scene?.body&&<div style={{fontSize:30,fontWeight:600,marginTop:19,lineHeight:1.2}}>{scene.body}</div>}
       </div>
-      {caption&&<div style={{position:'absolute',left:92,right:156,top:1400,fontSize:54,lineHeight:1.13,fontWeight:750,
-        textAlign:'center',textWrap:'balance',textShadow:'0 2px 8px #080606, 0 2px 2px #080606'}}>
-        {subtitle}
+      {caption&&<div style={{position:'absolute',left:155,right:155,top:1330,height:154,display:'grid',placeItems:'center',
+        fontSize:caption.text.length>60?44:50,lineHeight:1.16,fontWeight:750,textAlign:'center',
+        textShadow:'0 2px 8px #080606, 0 2px 2px #080606'}}>
+        <div style={{width:'100%',textWrap:'balance'}}>{subtitle}</div>
       </div>}
       {asset&&<div style={{position:'absolute',left:82,right:155,top:1635,fontSize:20,color:'#e4d5c3',lineHeight:1.25}}>
         {asset.origin} · {asset.license}

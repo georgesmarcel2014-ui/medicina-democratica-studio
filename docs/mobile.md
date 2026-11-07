@@ -6,13 +6,13 @@ Envie no ChatGPT Work uma ordem com título, série e roteiro integral aprovado.
 
 ## Fluxo no Work
 
-1. Selecione Gemini 2.5 Flash Preview TTS e confirme **Charon** no Google AI Studio. Use a cota gratuita. Uma sessão Google autorizada pode usar o playground com nenhuma chave selecionada. Se o Google exigir uma chave paga, encerre a geração.
+1. No Google AI Studio, confirme **Charon** como único locutor e use a cota gratuita. O modelo aprovado para John Snow foi Gemini 2.5 Flash Preview TTS. Para testar o Gemini 3.8 Flash TTS, siga a comparação PRIME+ antes de gerar o roteiro integral. Uma sessão Google autorizada pode usar o playground com nenhuma chave selecionada. Se o Google exigir faturamento, encerre a geração.
 2. Baixe o WAV gerado e mantenha o texto aprovado no campo `script` do episódio. Para uma narração já aprovada, use o WAV original. Em ambos os casos, declare `audio: {"path":"narration.wav","source":"google-ai-studio","approved":true}` no JSON e mantenha o WAV ao lado dele. Use uma pasta privada por ordem.
 3. Execute `produce` e revise as legendas contra o texto e a fala. O alinhador mede a fala no WAV. Defina os cortes a partir dessas marcas e do significado de cada trecho. Se o texto da fala divergir do roteiro, revise o WAV antes de entregar.
 
 ### Preset Charon
 
-No compositor, preencha **Audio Profile** com um narrador masculino maduro, natural em português brasileiro, seguro e caloroso, com pronúncia clara de nomes e termos médicos. Em **Scene**, dirija a abertura com curiosidade e urgência contida, acelere durante a investigação, faça pausas nas revelações e fale a última frase diretamente ao ouvinte. Use o bloco de fala para o roteiro aprovado e confirme **Charon** na ficha do locutor antes de rodar. O preset da API mantém as instruções fora da seção `Transcript`.
+Dirija uma voz documental masculina, madura e encorpada, de registro médio-grave e dicção nítida em português brasileiro. Peça curiosidade contida, pulso nos fatos, pausas breves nas revelações e queda natural no fim das afirmações. No Gemini 2.5, use **Audio Profile** e **Scene**. No 3.8, use **Style** no bloco de fala (`speech_metadata.style` na API). Confirme **Charon** e mantenha o roteiro integral separado da direção. Use uma tag de pausa só quando a pontuação e a direção forem insuficientes e confira o trecho gerado. Veja a [revisão PRIME+](production.md#revisão-prime).
 
 Para História com gravuras, B-roll ou animações verticais, use `"layout": "documental"` no manifesto. Cada plano pode receber seu crédito no recurso de mídia. Nas legendas alinhadas, marque `"emphasis": true` apenas nos termos que merecem destaque. Mantenha a fala à frente da trilha e dos efeitos, valide o MP4 completo e entregue o WAV do Google junto ao SRT.
 

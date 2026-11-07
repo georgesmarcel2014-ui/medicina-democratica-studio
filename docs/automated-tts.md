@@ -18,3 +18,5 @@ npm run tts -- --input /caminho/privado/roteiro-aprovado.txt --output /caminho/p
 ```
 
 O comando verifica a duração e preserva um WAV que já esteja no caminho de saída. Consulte [a documentação da API Gemini TTS](https://ai.google.dev/gemini-api/docs/speech-generation) para modelos, vozes e limites.
+
+Para comparar a Charon no Gemini 3.8 Flash TTS, passe `--model gemini-3.8-flash-tts` com um trecho idêntico ao da configuração aprovada. Confirme antes que o projeto está no Free Tier e com faturamento desativado. Nos modelos 3.8, o Studio envia o texto literal e a direção em `speech_metadata.style`. A troca do modelo de produção depende da [revisão PRIME+](production.md#revisão-prime).

@@ -74,3 +74,12 @@ O importador preserva os tempos calculados no WhisperX. Para legendas automátic
 Verifique os relatórios do pipeline, além da imagem final. Os critérios técnicos incluem MP4/H.264, 1080 × 1920, 30 FPS, duração dentro do limite e trilha de áudio para episódios narrados. A validação técnica não substitui escuta integral, revisão do sincronismo, legibilidade em celular, direitos autorais e revisão médico-editorial.
 
 A duração do contêiner pode ser arredondada ao quadro seguinte (até aproximadamente 33 ms). Isso não autoriza ultrapassar o limite absoluto de 179 segundos nem cortar o WAV para encurtar a fala. A demonstração é deliberadamente sem narração e não valida alinhamento acústico de uma voz fornecida pelo usuário.
+
+## Revisão PRIME+
+
+1. Confirme modelo, Charon predefinida, um locutor e português brasileiro. Antes de mudar o modelo ou a direção, gere a mesma passagem com ambas as configurações. Compare em volume semelhante e registre a decisão por timbre, prosódia, inteligibilidade e expressão. Preserve a configuração vencedora se a versão nova regredir.
+2. Confira a narração integral contra o roteiro aprovado. Ouça a abertura, os nomes e as revelações e revise a cadência até a última frase. Registre aprovação e mantenha o WAV original sem alteração de pitch.
+3. Compare o episódio com Semmelweis, Carlos Chagas e Igreja e Medicina. Use cortes e câmera para revelar informação, documentos legíveis e animações para relações que o acervo não mostra. Use os momentos de pausa para deixar a evidência aparecer.
+4. Revise a coerência histórica e científica, a procedência de cada plano e a identificação de reconstruções. Corrija repetições de imagens, continuidade fraca e explicações que dependam de efeitos decorativos.
+5. Confira legibilidade em tela pequena, centralização, área segura, até duas linhas por bloco e sincronismo de início a fim. Confira também o ganho da voz, o recuo da trilha e o pico final.
+6. Só libere o episódio após validar o arquivo completo e registrar onde a edição supera as referências, sem regressão na voz, imagem ou legendas. Entregue MP4, WAV, SRT e a descrição copiável do Instagram.

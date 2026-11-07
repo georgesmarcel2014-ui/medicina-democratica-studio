@@ -52,6 +52,26 @@ test('Google AI Studio TTS preserva WAV já encapsulado', async () => {
   assert.deepEqual(output, source);
 });
 
+test('Gemini 3.8 TTS mantém roteiro literal e direção em speech_metadata.style', async () => {
+  const script = 'A água da Broad Street.';
+  for (const model of ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']) {
+    await generateGoogleTts({
+      model, script, apiKey: 'teste',
+      fetchImpl: async (url, init) => {
+        assert.ok(String(url).endsWith(`/${model}:generateContent`));
+        const payload = JSON.parse(String(init?.body));
+        assert.deepEqual(payload.contents, [{role: 'user', parts: [{
+          text: script, speech_metadata: {style: `${CHARON_AUDIO_PROFILE} ${CHARON_DIRECTION}`}
+        }]}]);
+        assert.deepEqual(payload.generationConfig.speechConfig, {
+          voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Charon'}}, languageCode: 'pt-BR'
+        });
+        return responseFor(oneSecond);
+      }
+    });
+  }
+});
+
 test('TTS rejeita roteiro vazio, credencial ausente, modelo suspeito e outra voz', async () => {
   await assert.rejects(generateGoogleTts({script: '  ', apiKey: 'x'}), /Roteiro TTS vazio/);
   await assert.rejects(generateGoogleTts({script: 'Teste', apiKey: ''}), /GEMINI_API_KEY/);
