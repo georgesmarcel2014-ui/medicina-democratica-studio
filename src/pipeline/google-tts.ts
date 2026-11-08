@@ -13,13 +13,14 @@ export type GoogleTtsOptions = {
   apiKey: string;
   voice?: string;
   model?: string;
+  direction?: string;
   fetchImpl?: typeof fetch;
 };
 
 export const DEFAULT_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 export const DEFAULT_TTS_VOICE = 'Charon';
 export const CHARON_AUDIO_PROFILE = 'Português brasileiro. Narração documental masculina, madura, de registro médio-grave e encorpada. Dicção nítida e fala coloquial sóbria.';
-export const CHARON_DIRECTION = 'Abra com curiosidade contida. Faça pausas breves nas revelações. Ganhe pulso nos fatos e conclua cada afirmação com queda natural de entonação. Articule nomes e termos médicos com clareza. Evite melodia cantada, suavidade publicitária, sussurro e teatralidade.';
+export const CHARON_DIRECTION = 'Abra com curiosidade contida. Mantenha pulso entre frases e parágrafos, com respirações naturais e pausas curtas nas revelações. Conclua afirmações com queda natural de entonação e articule nomes e termos médicos com clareza. Evite melodia cantada, suavidade publicitária, sussurro e teatralidade.';
 export class GoogleTtsHttpError extends Error {
   constructor(readonly status: number) {
     super(`Google TTS falhou (HTTP ${status}). Confira chave, cota e modelo.`);
@@ -61,9 +62,11 @@ export async function generateGoogleTts(options: GoogleTtsOptions): Promise<Buff
   const voice = options.voice ?? DEFAULT_TTS_VOICE;
   if (!/^gemini-[a-z0-9.-]+-tts(?:-preview)?$/.test(model)) throw new Error('Modelo Google TTS inválido.');
   if (voice !== DEFAULT_TTS_VOICE) throw new Error('A voz de produção deve ser Charon.');
+  const episodeDirection = options.direction?.trim();
+  const direction = episodeDirection ? `${CHARON_DIRECTION} ${episodeDirection}` : CHARON_DIRECTION;
   const part = /^gemini-3\.8-flash(?:-lite)?-tts$/.test(model)
-    ? {text: script, speech_metadata: {style: `${CHARON_AUDIO_PROFILE} ${CHARON_DIRECTION}`}}
-    : {text: `# Audio Profile\n${CHARON_AUDIO_PROFILE}\n\n# Director's Notes\n${CHARON_DIRECTION}\n\n# Transcript\n${script}`};
+    ? {text: script, speech_metadata: {style: `${CHARON_AUDIO_PROFILE} ${direction}`}}
+    : {text: `# Audio Profile\n${CHARON_AUDIO_PROFILE}\n\n# Director's Notes\n${direction}\n\n# Transcript\n${script}`};
 
   // Newer TTS models treat the text as literal speech. Keep direction in metadata.
   const response = await (options.fetchImpl ?? fetch)(

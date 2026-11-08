@@ -1,14 +1,14 @@
 # Produção pelo Android
 
-O **modo oficial** é [PRIME+ ENXUTO](prime-enxuto.md): o GitHub auxilia somente no Google AI Studio TTS; o **ChatGPT Work original** cria e renderiza o vídeo, sem chamar `produce` ou o gerador automático de cenas. No celular, envie ao Work o roteiro aprovado e o WAV Charon definitivo (SRT opcional).
+O modo oficial é [PRIME+ ENXUTO](prime-enxuto.md). No celular, envie ao Work o roteiro aprovado. Se já tiver o WAV Charon desse roteiro, anexe-o no mesmo pedido.
 
 > Edite este episódio pelo fluxo **original e cinematográfico do ChatGPT Work**, com título “[título]” e série “[série]”. Use o WAV Charon e o roteiro anexados, sem renderizar via GitHub. Restaure trilha musical, B-roll relevante e fluidez de montagem; use apenas as novas animações gráficas que agregam valor. Compare com Semmelweis, Carlos Chagas e Igreja e Medicina. Entregue MP4 vertical 1080 × 1920, WAV, SRT e descrição; prepare Metricool, sem publicar antes de minha aprovação.
 
 ## Fluxo oficial no Work
 
-1. Gere somente a voz pelo Google AI Studio, com **Charon** confirmado e modelo aprovado. Para usar o CLI existente: `npm run tts -- --input roteiro-aprovado.txt --output narracao-charon.wav --voice Charon`. Faça teste e confira timbre, ritmo e pausas; não mude o modelo sem comparar.
-2. Anexe ao Work o WAV aprovado + roteiro (SRT revisado, se já houver). O Work decide B-roll, música, transições, cortes, animações e legendas, mantendo sincronismo natural; não use a montagem automática de cenas como padrão.
-3. Revise o MP4 integral, entregue os arquivos para download e envie ao Metricool para agendamento/publicação **apenas após aprovação explícita**.
+1. O Work gera o WAV pelo [Google AI Studio / Charon](automated-tts.md) ou reaproveita a tomada anexada. O WAV e o roteiro ficam na mesma sessão para conferência.
+2. O Work decide B-roll, música, transições, cortes, animações e legendas, e entrega o MP4, o WAV, o SRT e a descrição para revisão.
+3. Aprove o MP4 final na conversa antes de solicitar o agendamento ou a publicação pelo Metricool.
 
 ### Preset Charon
 

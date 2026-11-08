@@ -1,5 +1,7 @@
 # Produção de episódios
 
+Este guia descreve o renderizador técnico opcional. Para a edição original no Work, siga [PRIME+ ENXUTO](prime-enxuto.md).
+
 ## Contrato editorial
 
 Cada produção parte de título, série e roteiro aprovado. O formulário define a especificação do episódio e monta as cenas. A API estruturada também recebe cenas e recursos visuais. A aprovação médico-editorial do roteiro é responsabilidade do operador.
