@@ -1,4 +1,6 @@
-# Acionamento pelo ChatGPT
+# Acionamento do renderizador opcional pelo ChatGPT
+
+Para a edição original no Work, siga [PRIME+ ENXUTO](prime-enxuto.md).
 
 O estúdio atende pelo formulário web ou pela [API autenticada](openapi.yaml). Para operar diretamente no ChatGPT/Work, é preciso conectar uma ferramenta autorizada ao endereço HTTPS criado na [implantação](deployment.md). O formulário pode ser usado assim que a hospedagem estiver ativa.
 

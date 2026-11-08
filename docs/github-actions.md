@@ -4,9 +4,9 @@
 
 `.github/workflows/ci.yml` instala dependências com `npm ci`, verifica tipos e executa testes em pushes e pull requests. As permissões são de leitura do conteúdo. Instala FFmpeg para as verificações de mídia. Falhas preservam o status dos comandos e ficam nos logs.
 
-## Render demonstrativo
+O teste do contêiner de renderização é opcional. Use **Actions → Verificações → Run workflow** quando precisar testá-lo.
 
-Primeiro o arquivo do workflow precisa existir na branch padrão (`main`) para o GitHub disponibilizar o disparo manual. Esta entrega está em `feat/automated-audiovisual-studio`; revise e integre o PR antes desse passo. A criação do PR pela CLI foi bloqueada por `api.github.com` na rede atual.
+## Render demonstrativo
 
 Na aba **Actions → Render demonstrativo → Run workflow**, selecione a branch e execute. O workflow instala FFmpeg, usa o Chrome do runner e chama `npm run demo`.
 
@@ -18,4 +18,4 @@ O YAML configura a execução, mas uma execução real requer que o código cheg
 
 O workflow manual é reservado ao demonstrativo sintético. Cada execução usa recursos e a franquia da conta GitHub; confirme os limites antes de operações com cobrança. Nenhum serviço pago adicional é criado pelo código.
 
-Produção com arquivos privados deve usar o serviço autenticado descrito em [Integração com ChatGPT](chatgpt-integration.md). Não há workflow de produção que solicite segredos em campos públicos ou publique arquivos privados por padrão.
+Os episódios editoriais e seus arquivos privados seguem a [ordem PRIME+ no Work](prime-enxuto.md).

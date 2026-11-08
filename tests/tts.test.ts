@@ -11,9 +11,11 @@ function responseFor(pcm: Buffer, mimeType = 'audio/L16;rate=24000') {
 
 test('Google AI Studio TTS converte PCM 24 kHz para WAV sem cortar ou acelerar', async () => {
   let called = false;
+  const direction = 'Dê ênfase à primeira frase.';
   const wav = await generateGoogleTts({
     script: 'A ciência transforma vidas.',
     apiKey: 'segredo-de-teste-nao-real',
+    direction,
     fetchImpl: async (url, init) => {
       called = true;
       assert.match(String(url), /gemini-2\.5-flash-preview-tts:generateContent/);
@@ -22,6 +24,7 @@ test('Google AI Studio TTS converte PCM 24 kHz para WAV sem cortar ou acelerar',
       const prompt = payload.contents[0].parts[0].text;
       assert.ok(prompt.includes(CHARON_AUDIO_PROFILE));
       assert.ok(prompt.includes(CHARON_DIRECTION));
+      assert.ok(prompt.includes(direction));
       assert.equal(prompt.split('# Transcript\n')[1], 'A ciência transforma vidas.');
       assert.equal(payload.generationConfig.speechConfig.languageCode, 'pt-BR');
       assert.equal(payload.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, 'Charon');
@@ -54,14 +57,15 @@ test('Google AI Studio TTS preserva WAV já encapsulado', async () => {
 
 test('Gemini 3.8 TTS mantém roteiro literal e direção em speech_metadata.style', async () => {
   const script = 'A água da Broad Street.';
+  const direction = 'Dê uma pausa breve depois de Broad Street.';
   for (const model of ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']) {
     await generateGoogleTts({
-      model, script, apiKey: 'teste',
+      model, script, direction, apiKey: 'teste',
       fetchImpl: async (url, init) => {
         assert.ok(String(url).endsWith(`/${model}:generateContent`));
         const payload = JSON.parse(String(init?.body));
         assert.deepEqual(payload.contents, [{role: 'user', parts: [{
-          text: script, speech_metadata: {style: `${CHARON_AUDIO_PROFILE} ${CHARON_DIRECTION}`}
+          text: script, speech_metadata: {style: `${CHARON_AUDIO_PROFILE} ${CHARON_DIRECTION} ${direction}`}
         }]}]);
         assert.deepEqual(payload.generationConfig.speechConfig, {
           voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Charon'}}, languageCode: 'pt-BR'
