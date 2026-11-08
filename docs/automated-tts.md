@@ -2,7 +2,7 @@
 
 ## Gerar o WAV
 
-Com o roteiro aprovado em uma pasta privada da sessão do Work e `GEMINI_API_KEY` configurada como segredo de um projeto Free Tier sem faturamento:
+Guarde o roteiro aprovado em uma pasta privada da sessão do Work. Configure `GEMINI_API_KEY` como segredo de um projeto Free Tier com faturamento desativado.
 
 ```sh
 npm run tts -- --input /pasta/privada/roteiro-aprovado.txt --output /pasta/privada/narracao-charon.wav

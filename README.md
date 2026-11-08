@@ -8,7 +8,7 @@ O repositório mantém a integração de voz. O Work conduz a edição, a trilha
 
 Use a [ordem PRIME+](docs/prime-enxuto.md) com o roteiro aprovado. No Android, veja o [guia do Work](docs/mobile.md).
 
-Em um checkout com Node.js 24, FFmpeg/ffprobe e a chave de um projeto gratuito já configurada no ambiente privado do Work:
+Para gerar a voz no checkout, use Node.js 24 e FFmpeg/ffprobe. Configure a chave de um projeto gratuito no ambiente privado do Work.
 
 ```sh
 npm ci
