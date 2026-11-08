@@ -1,5 +1,11 @@
 # Medicina Democrática Studio
 
+## Fluxo oficial PRIME+ ENXUTO (Work-first)
+
+**Roteiro aprovado → TTS Google AI Studio/Charon pelo GitHub → edição cinematográfica original no ChatGPT Work → revisão → publicação/agendamento via Metricool após aprovação.**
+
+O GitHub **não monta o MP4 no fluxo principal**. O renderizador automático descrito abaixo é um **modo técnico legado/opcional**, não o editor dos vídeos editoriais. Preservar música, B-roll, ritmo e animações úteis sob direção do Work. [Ordem operacional PRIME+ ENXUTO](docs/prime-enxuto.md).
+
 Pipeline para produzir vídeos científicos verticais com **Google AI Studio, faster-whisper, Remotion e FFmpeg**. A partir do roteiro aprovado, o estúdio gera o WAV, sincroniza as legendas pela fala e entrega MP4 e SRT. Um WAV definitivo do Google AI Studio também pode ser enviado para reutilizar a narração.
 
 O estúdio monta as cenas, valida e renderiza MP4 H.264 em 1080 × 1920 a 30 FPS. A duração máxima é **179 segundos**. A demonstração silenciosa apresenta os elementos visuais originais.
@@ -8,7 +14,7 @@ O estúdio monta as cenas, valida e renderiza MP4 H.264 em 1080 × 1920 a 30 FPS
 
 ## Produção pelo celular
 
-O [guia do Android](docs/mobile.md) descreve a produção de um episódio por vez no ChatGPT Work e o notebook Colab gratuito de reserva. Os dois usam o pipeline existente e entregam MP4 vertical e SRT.
+O [guia do Android](docs/mobile.md) descreve o fluxo oficial: TTS isolado e edição original no ChatGPT Work. O notebook Colab permanece como alternativa técnica legada; não é o editor padrão.
 
 ## Começar
 
@@ -41,7 +47,7 @@ O [guia de implantação](docs/deployment.md) usa o `Dockerfile` e o Blueprint `
 
 Veja [Google TTS e legendas automáticas](docs/automated-tts.md) para o comando de WAV isolado e o comportamento de cada modo.
 
-## Formulário de produção
+## Formulário de produção (modo técnico legado/opcional)
 
 O administrador configura `STUDIO_API_TOKEN` (pelo menos 32 caracteres) e `STUDIO_JOBS_DIR` para uma pasta privada e inicia o serviço com `npm run api`. O serviço usa a porta 8787 e escuta em loopback por padrão. Configure hospedagem HTTPS protegida antes de oferecer acesso remoto.
 
