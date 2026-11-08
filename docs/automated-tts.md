@@ -1,10 +1,16 @@
 # Google AI Studio TTS e legendas automáticas
 
+**Fluxo oficial PRIME+ ENXUTO:** usar somente a geração do WAV Charon e entregar o roteiro + WAV ao ChatGPT Work para montagem cinematográfica. O renderizador automático abaixo permanece como recurso técnico legado, não como etapa padrão. [Diretriz](prime-enxuto.md).
+
 O estúdio gera WAV mono de 24 kHz com Google Gemini TTS a partir de um roteiro aprovado. O modelo padrão é `gemini-2.5-flash-preview-tts`, voz Charon, em português brasileiro. O pipeline verifica o WAV e sua duração antes de renderizar. O limite é 179 segundos.
 
 Configure `GEMINI_API_KEY` no ambiente do servidor conforme o [guia de implantação](deployment.md). A chave autentica a chamada HTTPS ao Google e fica no servidor. O formulário usa um token de acesso separado. O reconhecimento de fala roda localmente e recebe o WAV, com o modelo Whisper small já instalado no contêiner.
 
-## Produzir
+## TTS isolado (oficial)
+
+Use o comando de WAV isolado mostrado abaixo. Na rota principal, o GitHub encerra seu papel após a geração e conferência da voz; o Work recebe os arquivos e cria música, B-roll, cortes, animações e vídeo final. O Metricool só publica/agendará após aprovação.
+
+## Produzir com o motor automático (legado/opcional)
 
 1. No formulário, confirme a aprovação do roteiro e selecione **Produzir vídeo**. Na API, envie `audio: {"path":"narration.wav","source":"google-tts","scriptApproved":true}` em uma especificação de episódio. Veja [o contrato](openapi.yaml).
 2. Para reaproveitar um WAV aprovado, anexe-o com `audio.source: "google-ai-studio"` e `audio.approved: true`. Se tiver legendas revisadas para aquele WAV, envie o JSON de legendas junto com ele.
