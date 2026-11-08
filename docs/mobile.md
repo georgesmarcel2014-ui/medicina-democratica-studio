@@ -1,20 +1,24 @@
 # Produção pelo Android
 
-Envie no ChatGPT Work uma ordem com título, série e roteiro integral aprovado. O Work gera a voz no Google AI Studio, sincroniza as legendas, renderiza um episódio por vez e devolve MP4, WAV e SRT para download na conversa, com a descrição do Instagram em um bloco para copiar. As séries disponíveis são Na Prática, Notícias e História.
+O **modo oficial** é [PRIME+ ENXUTO](prime-enxuto.md): o GitHub auxilia somente no Google AI Studio TTS; o **ChatGPT Work original** cria e renderiza o vídeo, sem chamar `produce` ou o gerador automático de cenas. No celular, envie ao Work o roteiro aprovado e o WAV Charon definitivo (SRT opcional).
 
-> Produza um episódio da Medicina Democrática com o título “[título]”, na série “[série]”. Use o roteiro aprovado abaixo e os insumos anexados. Entregue o MP4 vertical, o WAV Charon, o SRT e a descrição do Instagram em bloco.
+> Edite este episódio pelo fluxo **original e cinematográfico do ChatGPT Work**, com título “[título]” e série “[série]”. Use o WAV Charon e o roteiro anexados, sem renderizar via GitHub. Restaure trilha musical, B-roll relevante e fluidez de montagem; use apenas as novas animações gráficas que agregam valor. Compare com Semmelweis, Carlos Chagas e Igreja e Medicina. Entregue MP4 vertical 1080 × 1920, WAV, SRT e descrição; prepare Metricool, sem publicar antes de minha aprovação.
 
-## Fluxo no Work
+## Fluxo oficial no Work
 
-1. No Google AI Studio, confirme **Charon** como único locutor e use a cota gratuita. O modelo aprovado para John Snow foi Gemini 2.5 Flash Preview TTS. Para testar o Gemini 3.8 Flash TTS, siga a comparação PRIME+ antes de gerar o roteiro integral. Uma sessão Google autorizada pode usar o playground com nenhuma chave selecionada. Se o Google exigir faturamento, encerre a geração.
-2. Baixe o WAV gerado e mantenha o texto aprovado no campo `script` do episódio. Para uma narração já aprovada, use o WAV original. Em ambos os casos, declare `audio: {"path":"narration.wav","source":"google-ai-studio","approved":true}` no JSON e mantenha o WAV ao lado dele. Use uma pasta privada por ordem.
-3. Execute `produce` e revise as legendas contra o texto e a fala. O alinhador mede a fala no WAV. Defina os cortes a partir dessas marcas e do significado de cada trecho. Se o texto da fala divergir do roteiro, revise o WAV antes de entregar.
+1. Gere somente a voz pelo Google AI Studio, com **Charon** confirmado e modelo aprovado. Para usar o CLI existente: `npm run tts -- --input roteiro-aprovado.txt --output narracao-charon.wav --voice Charon`. Faça teste e confira timbre, ritmo e pausas; não mude o modelo sem comparar.
+2. Anexe ao Work o WAV aprovado + roteiro (SRT revisado, se já houver). O Work decide B-roll, música, transições, cortes, animações e legendas, mantendo sincronismo natural; não use a montagem automática de cenas como padrão.
+3. Revise o MP4 integral, entregue os arquivos para download e envie ao Metricool para agendamento/publicação **apenas após aprovação explícita**.
 
 ### Preset Charon
 
 Dirija uma voz documental masculina, madura e encorpada, de registro médio-grave e dicção nítida em português brasileiro. Peça curiosidade contida, pulso nos fatos, pausas breves nas revelações e queda natural no fim das afirmações. No Gemini 2.5, use **Audio Profile** e **Scene**. No 3.8, use **Style** no bloco de fala (`speech_metadata.style` na API). Confirme **Charon** e mantenha o roteiro integral separado da direção. Use uma tag de pausa só quando a pontuação e a direção forem insuficientes e confira o trecho gerado. Veja a [revisão PRIME+](production.md#revisão-prime).
 
-Para História com gravuras, B-roll ou animações verticais, use `"layout": "documental"` no manifesto. Cada plano pode receber seu crédito no recurso de mídia. Nas legendas alinhadas, marque `"emphasis": true` apenas nos termos que merecem destaque. Mantenha a fala à frente da trilha e dos efeitos, valide o MP4 completo e entregue o WAV do Google junto ao SRT.
+Para História, oriente o Work a escolher gravuras, documentos, B-roll e animações verticais verificáveis; registre os créditos. Preserve a música documental de fundo e faça ducking para manter a voz inteligível. Verifique legendas alinhadas e entregue o WAV original junto ao SRT.
+
+## Modo técnico legado — render automático (não é o padrão PRIME+)
+
+Os comandos abaixo são mantidos para testes/contingência. **Não usá-los como montagem padrão do Work**, pois podem substituir escolhas de B-roll, trilha e ritmo.
 
 ### Preparação do ambiente
 
