@@ -30,7 +30,7 @@ test('fluxo oficial usa WAV aprovado pelo operador sem gerar TTS automaticamente
   const mobile = read('docs/mobile.md');
   const readme = read('README.md');
   assert.match(prime, /o operador gera o TTS/);
-  assert.match(prime, /WAV definitivo que eu anexei/);
+  assert.match(prime, /WAV Charon definitivo que eu anexei/);
   assert.match(mobile, /WAV Charon/);
   assert.match(readme, /WAV Charon/);
   const workOrder = prime.split('## Ordem copiável para o Work')[1];
