@@ -1,14 +1,14 @@
 # Produção pelo Android
 
-O modo oficial é [PRIME+ ENXUTO](prime-enxuto.md). No celular, envie ao Work o roteiro aprovado. Se já tiver o WAV Charon desse roteiro, anexe-o no mesmo pedido.
+O modo oficial é [PRIME+ ENXUTO](prime-enxuto.md). No celular, **gere você mesmo o Charon no Google AI Studio**, escute e aprove a tomada, depois envie ao Work **o roteiro aprovado e o WAV Charon definitivo juntos**. Esse é o fluxo padrão; não solicite geração automática da voz.
 
-> Edite este episódio pelo fluxo **original e cinematográfico do ChatGPT Work**, com título “[título]” e série “[série]”. Use o WAV Charon e o roteiro anexados, sem renderizar via GitHub. Restaure trilha musical, B-roll relevante e fluidez de montagem; use apenas as novas animações gráficas que agregam valor. Compare com Semmelweis, Carlos Chagas e Igreja e Medicina. Entregue MP4 vertical 1080 × 1920, WAV, SRT e descrição; prepare Metricool, sem publicar antes de minha aprovação.
+> Edite este episódio pelo fluxo **original e cinematográfico do ChatGPT Work**, com título “[título]” e série “[série]”. Use o **WAV Charon definitivo enviado por mim** e o roteiro anexados, **não gere outro TTS**, sem renderizar via GitHub. Restaure trilha musical, B-roll relevante e fluidez de montagem; use apenas as novas animações gráficas que agregam valor. Compare com Semmelweis, Carlos Chagas e Igreja e Medicina. Entregue MP4 vertical 1080 × 1920 **com link direto de download nesta conversa**, WAV original, SRT e descrição com hashtags **pronta para copiar e colar**. **Não publique, agende ou envie ao Metricool** sem minha solicitação explícita.
 
 ## Fluxo oficial no Work
 
-1. O Work gera o WAV pelo [Google AI Studio / Charon](automated-tts.md) ou reaproveita a tomada anexada. O WAV e o roteiro ficam na mesma sessão para conferência.
+1. O operador gera o WAV no Google AI Studio (Charon) e o anexa com o roteiro aprovado. O Work confere e **preserva a tomada**; [TTS por CLI](automated-tts.md) é recurso opcional e não deve ser acionado por padrão.
 2. O Work decide B-roll, música, transições, cortes, animações e legendas, e entrega o MP4, o WAV, o SRT e a descrição para revisão.
-3. Aprove o MP4 final na conversa antes de solicitar o agendamento ou a publicação pelo Metricool.
+3. Receba o MP4 por link direto no chat e a descrição copiável. Aprove o corte final antes de **qualquer** solicitação separada de postagem ou agendamento pelo Metricool.
 
 ### Preset Charon
 

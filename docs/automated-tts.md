@@ -1,5 +1,7 @@
 # Google AI Studio TTS
 
+> **Recurso técnico opcional:** no fluxo PRIME+ aprovado, o **operador gera o WAV Charon no AI Studio e envia ao Work**. Não ative TTS por CLI automaticamente, não peça chaves no chat e não substitua a narração aprovada. Veja [prime-enxuto.md](prime-enxuto.md).
+
 ## Gerar o WAV
 
 Guarde o roteiro aprovado em uma pasta privada da sessão do Work. Configure `GEMINI_API_KEY` como segredo de um projeto Free Tier com faturamento desativado.
