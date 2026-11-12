@@ -32,7 +32,22 @@ Foram obtidos os **conteúdos completos da branch pelo conector GitHub** e avali
 - Casos de comportamento de agentes de `docs/harness-evaluation.md`: **not-run**; nenhum cliente foi reiniciado nem observado em ambiente de teste.
 - Nenhuma ação ou workflow de renderização foi disparado propositalmente; o teste não requer custos de API, tokens, segredos, publicações ou agendamentos.
 
-## Próxima validação para habilitar revisão de merge
+## Atualização após testes informados pelo operador
+
+Em **12/11/2026**, o operador confirmou na conversa que os quatro comandos abaixo **terminaram sem erros** em seu ambiente:
+
+- `npm ci --no-audit --no-fund` — **aprovado conforme relato do operador**;
+- `npm run test:prime` — **aprovado conforme relato do operador**;
+- `npm run typecheck` — **aprovado conforme relato do operador**;
+- `npm test` — **aprovado conforme relato do operador**.
+
+Esses resultados **não foram executados independentemente neste ambiente**; logs, sistema operacional, versão exata do Node e hash do checkout testado não foram fornecidos. O relato refere-se ao estado da branch anterior a este registro documental (head `16f488c4524c520841f88ebe27e4e95010e2e0a0`). Não confundir confirmação do operador com status CI.
+
+**Revisão do diff:** comparação `main...feat/toolkit-prime-harness-20261112` mostrou apenas alterações em `AGENTS.md`, `README.md`, `docs/`, `tests/prime-contract.test.mjs` e `package.json`. Nenhum arquivo `src/`, workflow, lockfile ou configuração de publicação foi modificado. Não foi criado PR, não foi executado merge e não houve publicação/agendamento de conteúdo.
+
+**Decisão:** a branch está preparada para revisão humana das alterações; **merge na `main` exige autorização separada**. Como a documentação registrou resultados relatados sem logs, uma verificação de CI ou evidência de terminal continua opcional para maior rastreabilidade, não devendo ser inventada.
+
+## Reprodução independente opcional e condições para merge
 
 Em um ambiente isolado com **Node.js 24** e checkout da **branch de revisão**, sem credenciais e sem acesso a materiais privados:
 
